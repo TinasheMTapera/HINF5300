@@ -1,0 +1,347 @@
+---
+title: "Assignment 1: Step Detection"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Assignment 1: Step Detection}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+# general
+library(HINF5300)
+library(tidyverse)
+
+# for plotting
+library(gghighlight)
+```
+
+## Introduction
+
+In this assignment, we want to use accelerometer data collected from our own
+iOS devices to develop a simple step detection algorithm.
+
+We used the DataLogger app to access the accelerometer and sent the data
+automatically to our laptops. Now, we'll implement what we learned in class
+to detect steps.
+
+## Cursory Glance
+
+```{r}
+acc <- read_datalogger_file(system.file("extdata", "acce.csv", package = "HINF5300"))
+```
+
+Here is what the data looks like:
+
+```{r}
+head(acc)
+```
+
+Let's check the sampling rate:
+
+```{r}
+acc %>%
+  mutate(minute = lubridate::minute(timestamp)) %>%
+  group_by(minute) %>%
+  summarise(n())
+```
+
+For minute 39 we have just under 6000 samples, per minute, which comes
+down to 100Hz.
+
+```{r}
+sampling_rate <- 100
+```
+
+
+This is a good sampling rate. Let's plot the full data set:
+
+```{r}
+acc %>%
+  pivot_longer(-timestamp) %>%
+  ggplot(aes(x=timestamp, y=value)) +
+  geom_line(aes(color=name))
+```
+
+
+## Calculate the Magnitude of Acceleration
+
+To combine the signal from different axes, we calculate the magnitude of
+the combined vectors.
+
+```{r}
+#| warning: false
+acc <-
+  acc %>%
+  mutate(mag = sqrt((X^2 + Y^2 + Z^2)))
+
+acc %>%
+  slice(2000:4000) %>%
+  pivot_longer(-timestamp) %>%
+  ggplot(aes(x=timestamp, y=value)) +
+  geom_line(aes(color=name)) +
+  gghighlight(name == "mag")
+```
+
+## Time Domain Smoothing
+
+We can try a number of time domain smoothing techniques to remove noise.
+
+### Moving Average filter
+
+Here we use the moving average filter from the `zoo` package with a number of
+different window sizes.
+
+```{r, warning=FALSE, message=FALSE}
+
+window_sizes <- c(5, 10, 20, 50)
+column_names <- paste0("window_size_", window_sizes, sep="")
+
+acc %>%
+  slice(2000:4000) %>%
+  bind_cols({
+    
+    vec <- pull(., mag)
+    
+    purrr::map_dfc(window_sizes, ~ zoo::rollmean(vec, .x, fill=NA)) %>%
+      setNames(column_names)
+    
+  }) %>%
+  select(timestamp, matches("mag|window")) %>%
+  pivot_and_plot(timestamp) +
+  gghighlight(str_detect(name, "window")) +
+  facet_wrap(~name)
+  
+```
+
+Not great, but we can look at other smoothing methods too.
+
+### EWMA
+
+Here's an exponentially weighted moving average:
+
+```{r}
+window_sizes <- c(5, 10, 20, 50)
+column_names <- paste0("window_size_", window_sizes, sep="")
+
+acc %>%
+  slice(2000:4000) %>%
+  bind_cols({
+    
+    vec <- pull(., mag)
+    
+    purrr::map_dfc(window_sizes, ~ pracma::movavg(vec, .x, type="e")) %>%
+      setNames(column_names)
+    
+  }) %>%
+  select(timestamp, matches("mag|window")) %>%
+  pivot_and_plot(timestamp) +
+  gghighlight(str_detect(name, "window")) +
+  facet_wrap(~name)
+```
+
+### Median Filter
+
+Lastly, we'll try the median filter
+
+```{r}
+window_sizes <- c(5, 12, 19, 51)
+column_names <- paste0("window_size_", window_sizes, sep="")
+
+acc %>%
+  slice(2000:3000) %>%
+  bind_cols({
+    
+    vec <- pull(., mag)
+    
+    purrr::map_dfc(window_sizes, ~ zoo::rollmedian(vec, .x, fill=NA)) %>%
+      setNames(column_names)
+    
+  }) %>%
+  select(timestamp, matches("mag|window")) %>%
+  pivot_and_plot(timestamp) +
+  gghighlight(str_detect(name, "window")) +
+  facet_wrap(~name)
+```
+
+These methods aren't doing a fantastic job, but we can keep trying in the
+frequency domain
+
+## Convert to Frequency Domain Data
+
+We can use the `stats::fft` function to convert to the frequency domain:
+
+```{r}
+freq <- acc %>%
+  slice(2000:4000) %>%
+  pull(mag) %>%
+  stats::fft()
+
+Mod(freq) %>%
+  plot(type="l")
+```
+
+So what we're seeing here are the high amplitudes of noise at the very high
+and very low frequencies. We can implement a filter to get rid
+of slow peaks and jumpy peaks.
+
+```{r}
+cutoff <- c(0.8, 3.5)
+b_filt <- signal::butter(
+  3, 
+  c(
+    cutoff[1] / ( 0.5 * sampling_rate ),
+    cutoff[2] / ( 0.5 * sampling_rate )),
+  type="pass")
+
+acc %>%
+  slice(2000:3000) %>%
+  mutate(filtered = signal::filter(b_filt, mag)) %>%
+  select(timestamp, mag, filtered) %>%
+  pivot_and_plot(timestamp) +
+#   pivot_longer(-timestamp) %>%
+#   filter(name == "mag" | name == "filtered") %>%
+#   mutate(alpha = ifelse(name == "filtered", 0.5, 0.2)) -> acc_plot
+# 
+# ggplot(acc_plot) +
+#   geom_line(aes(x=timestamp, y=value)
+#             ) +
+  gghighlight(name == "filtered")
+```
+
+This signal looks better.
+
+```{r}
+acc %>%
+  slice(2000:3000) %>%
+  mutate(filtered = signal::filter(b_filt, mag)) -> acc_filtered
+```
+
+If we smooth this...
+
+```{r}
+
+window_sizes <- c(5, 12, 19, 51)
+column_names <- paste0("window_size_", window_sizes, sep="")
+
+acc_filtered %>%
+  bind_cols({
+    
+    vec <- pull(., filtered)
+    
+    purrr::map_dfc(window_sizes, ~ zoo::rollmedian(vec, .x, fill=NA)) %>%
+      setNames(column_names)
+    
+  }) %>%
+  select(timestamp, matches("filtered|window")) %>%
+  pivot_and_plot(timestamp) +
+  gghighlight(str_detect(name, "window")) +
+  facet_wrap(~name)
+```
+
+We can see that smoothing is more effective. We'll wrap the above in a function.
+
+## A Pipeline for Data Cleaning
+
+Here are two wrapper functions for the above processes:
+
+```{r}
+filter_signal <- function(
+    vec, 
+    low_pass=0.8, 
+    high_pass=3.5, 
+    order=3,
+    sampling_rate=100
+    ) {
+  
+  b_filt <- signal::butter(
+    order, 
+    c(
+      low_pass / ( 0.5 * sampling_rate ),
+      high_pass / ( 0.5 * sampling_rate )),
+    type="pass")
+  
+  
+  signal::filter(b_filt, vec)
+  
+}
+
+smooth_signal <- function(vec, window_size=5, type="median") {
+  
+  if(type=="median") {
+    if(window_size %% 2 != 1) {
+      window_size = window_size + 1
+    }
+    output <- zoo::rollmedian(vec, window_size, fill=NA)
+    
+  }
+  
+  if(type=="mean") {
+    output <- zoo::rollmean(vec, window_size, fill=NA)
+  }
+  
+  if(type=="ewma") {
+    output <- pracma::movavg(vec, window_size, type="e")
+  }
+  
+  output
+
+}
+
+acc %>%
+  mutate(clean_signal = mag %>%
+           filter_signal() %>% 
+           smooth_signal()) %>%
+  head(20)
+```
+
+## Detecting Steps
+
+Finally, it's time to detect steps.
+
+```{r}
+acc_clean <- acc %>%
+  mutate(clean_signal = mag %>%
+           filter_signal(low_pass = 0.1, high_pass = 1.5) %>% 
+           smooth_signal()) %>%
+  select(timestamp, clean_signal)
+
+acc_clean %>%
+  slice(2000:3000) %>%
+  ggplot(aes(x=timestamp, y=clean_signal)) +
+  geom_line()
+```
+
+Let's try zero crossings to grab the moments that the signal goes over zero:
+
+```{r}
+acc_clean %>%
+  slice(2000:3000) %>%
+  summarise(n_steps = modelbased::zero_crossings(clean_signal) %>%
+              length())
+  
+```
+
+Here's peak detection from `quantmod`:
+
+```{r}
+acc_clean %>%
+  slice(2000:3000) %>%
+  summarise(n_steps = quantmod::findPeaks(clean_signal, thresh = 0) %>%
+              length())
+```
+
+# Conclusion
+
+Here's a fully fledged pipeline function for this pipeline:
+
+```{r}
+detect_steps <- function(input_file) {}
+```
