@@ -21,5 +21,6 @@ Imports:
     magrittr,
     pracma,
     quantmod,
+    signal,
     zoo
 URL: https://tinashemtapera.github.io/HINF5300/
