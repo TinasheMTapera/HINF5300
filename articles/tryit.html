@@ -73,14 +73,29 @@
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tinashemtapera.github.io/HINF5300/">HINF5300</a></span><span class="op">)</span></span></code></pre></div>
-  </main>
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
+<p>You can install this package from Github using <code>remotes</code>:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># install.packages("remotes") # if necessary</span></span>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"TinasheMTapera/HINF5300"</span><span class="op">)</span></span></code></pre></div>
+<p>Or with the source files, by opening this <code>.Rproj</code> file in RStudio and clicking the <code>Install</code> button under the Build tab.</p>
+</div>
+<div class="section level2">
+<h2 id="assignment-1">Assignment 1<a class="anchor" aria-label="anchor" href="#assignment-1"></a>
+</h2>
+<p>You can try assignment 1’s step detection algorithm by first using the Datalogger iOS or Android app to collect raw accelerometer data. Then, once that CSV file is on your machine with this package installed, simply do <code>HINF5300::runExamples("assignment1")</code>. A pop up window will ask you to type the path to your data and set the parameters for step detection as described in the notebook. Submitting the data will produce a pretty step detection report for you. It’s also possible to do this in R with <code>HINF5300::detect_steps(&lt;YOUR FILE&gt;, &lt;PARAMS&gt;)</code> which will return a data frame that you can plot yourself.</p>
+</div>
+  </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
+    </nav></aside>
 </div>
 
 
 
     <footer><div class="pkgdown-footer-left">
   <p></p>
-<p>Developed by The package maintainer.</p>
+<p>Developed by Tinashe M. Tapera.</p>
 </div>
 
 <div class="pkgdown-footer-right">

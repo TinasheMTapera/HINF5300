@@ -71,15 +71,15 @@
 
     
     
-<div class="section level3">
-<h3 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
-</h3>
+<div class="section level2">
+<h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
+</h2>
 <p>In this assignment, we want to use accelerometer data collected from our own iOS devices to develop a simple step detection algorithm.</p>
 <p>We used the DataLogger app to access the accelerometer and sent the data automatically to our laptops. Now, we’ll implement what we learned in class to detect steps.</p>
 </div>
-<div class="section level3">
-<h3 id="cursory-glance">Cursory Glance<a class="anchor" aria-label="anchor" href="#cursory-glance"></a>
-</h3>
+<div class="section level2">
+<h2 id="cursory-glance">Cursory Glance<a class="anchor" aria-label="anchor" href="#cursory-glance"></a>
+</h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">acc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_datalogger_file.html">read_datalogger_file</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"acce.csv"</span>, package <span class="op">=</span> <span class="st">"HINF5300"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>Here is what the data looks like:</p>
@@ -97,9 +97,9 @@
 <p>Let’s check the sampling rate:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">acc</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">mutate</span><span class="op">(</span>minute <span class="op">=</span> <span class="fu">lubridate</span><span class="fu">::</span><span class="fu"><a href="https://lubridate.tidyverse.org/reference/minute.html" class="external-link">minute</a></span><span class="op">(</span><span class="va">timestamp</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">group_by</span><span class="op">(</span><span class="va">minute</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">summarise</span><span class="op">(</span><span class="fu">n</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>minute <span class="op">=</span> <span class="fu">lubridate</span><span class="fu">::</span><span class="fu"><a href="https://lubridate.tidyverse.org/reference/minute.html" class="external-link">minute</a></span><span class="op">(</span><span class="va">timestamp</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">minute</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarise</a></span><span class="op">(</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/context.html" class="external-link">n</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 2</span></span></span>
 <span><span class="co">#&gt;   minute `n()`</span></span>
 <span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span></span></span>
@@ -117,17 +117,17 @@
 <span>  <span class="fu">geom_line</span><span class="op">(</span><span class="fu">aes</span><span class="op">(</span>color<span class="op">=</span><span class="va">name</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="assignment1_files/figure-html/unnamed-chunk-6-1.png" width="700"></p>
 </div>
-<div class="section level3">
-<h3 id="calculate-the-magnitude-of-acceleration">Calculate the Magnitude of Acceleration<a class="anchor" aria-label="anchor" href="#calculate-the-magnitude-of-acceleration"></a>
-</h3>
+<div class="section level2">
+<h2 id="calculate-the-magnitude-of-acceleration">Calculate the Magnitude of Acceleration<a class="anchor" aria-label="anchor" href="#calculate-the-magnitude-of-acceleration"></a>
+</h2>
 <p>To combine the signal from different axes, we calculate the magnitude of the combined vectors.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">acc</span> <span class="op">&lt;-</span></span>
 <span>  <span class="va">acc</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">mutate</span><span class="op">(</span>mag <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="op">(</span><span class="va">X</span><span class="op">^</span><span class="fl">2</span> <span class="op">+</span> <span class="va">Y</span><span class="op">^</span><span class="fl">2</span> <span class="op">+</span> <span class="va">Z</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>mag <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="op">(</span><span class="va">X</span><span class="op">^</span><span class="fl">2</span> <span class="op">+</span> <span class="va">Y</span><span class="op">^</span><span class="fl">2</span> <span class="op">+</span> <span class="va">Z</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">acc</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">slice</span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">4000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/slice.html" class="external-link">slice</a></span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">4000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu">pivot_longer</span><span class="op">(</span><span class="op">-</span><span class="va">timestamp</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu">ggplot</span><span class="op">(</span><span class="fu">aes</span><span class="op">(</span>x<span class="op">=</span><span class="va">timestamp</span>, y<span class="op">=</span><span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">geom_line</span><span class="op">(</span><span class="fu">aes</span><span class="op">(</span>color<span class="op">=</span><span class="va">name</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
@@ -135,13 +135,13 @@
 <span><span class="co">#&gt; label_key: name</span></span></code></pre></div>
 <p><img src="assignment1_files/figure-html/unnamed-chunk-7-1.png" width="700"></p>
 </div>
-<div class="section level3">
-<h3 id="time-domain-smoothing">Time Domain Smoothing<a class="anchor" aria-label="anchor" href="#time-domain-smoothing"></a>
-</h3>
+<div class="section level2">
+<h2 id="time-domain-smoothing">Time Domain Smoothing<a class="anchor" aria-label="anchor" href="#time-domain-smoothing"></a>
+</h2>
 <p>We can try a number of time domain smoothing techniques to remove noise.</p>
-<div class="section level4">
-<h4 id="moving-average-filter">Moving Average filter<a class="anchor" aria-label="anchor" href="#moving-average-filter"></a>
-</h4>
+<div class="section level3">
+<h3 id="moving-average-filter">Moving Average filter<a class="anchor" aria-label="anchor" href="#moving-average-filter"></a>
+</h3>
 <p>Here we use the moving average filter from the <code>zoo</code> package with a number of different window sizes.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
@@ -149,41 +149,41 @@
 <span><span class="va">column_names</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"window_size_"</span>, <span class="va">window_sizes</span>, sep<span class="op">=</span><span class="st">""</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">acc</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">slice</span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">4000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">bind_cols</span><span class="op">(</span><span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/slice.html" class="external-link">slice</a></span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">4000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_cols</a></span><span class="op">(</span><span class="op">{</span></span>
 <span>    </span>
-<span>    <span class="va">vec</span> <span class="op">&lt;-</span> <span class="fu">pull</span><span class="op">(</span><span class="va">.</span>, <span class="va">mag</span><span class="op">)</span></span>
+<span>    <span class="va">vec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/pull.html" class="external-link">pull</a></span><span class="op">(</span><span class="va">.</span>, <span class="va">mag</span><span class="op">)</span></span>
 <span>    </span>
 <span>    <span class="fu">purrr</span><span class="fu">::</span><span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">map_dfc</a></span><span class="op">(</span><span class="va">window_sizes</span>, <span class="op">~</span> <span class="fu">zoo</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/zoo/man/rollmean.html" class="external-link">rollmean</a></span><span class="op">(</span><span class="va">vec</span>, <span class="va">.x</span>, fill<span class="op">=</span><span class="cn">NA</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>      <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">column_names</span><span class="op">)</span></span>
 <span>    </span>
 <span>  <span class="op">}</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">select</span><span class="op">(</span><span class="va">timestamp</span>, <span class="fu">matches</span><span class="op">(</span><span class="st">"mag|window"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">timestamp</span>, <span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">matches</a></span><span class="op">(</span><span class="st">"mag|window"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu">pivot_and_plot</span><span class="op">(</span><span class="va">timestamp</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">gghighlight</span><span class="op">(</span><span class="fu">str_detect</span><span class="op">(</span><span class="va">name</span>, <span class="st">"window"</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">facet_wrap</span><span class="op">(</span><span class="op">~</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
 <p><img src="assignment1_files/figure-html/unnamed-chunk-8-1.png" width="700"></p>
 <p>Not great, but we can look at other smoothing methods too.</p>
 </div>
-<div class="section level4">
-<h4 id="ewma">EWMA<a class="anchor" aria-label="anchor" href="#ewma"></a>
-</h4>
+<div class="section level3">
+<h3 id="ewma">EWMA<a class="anchor" aria-label="anchor" href="#ewma"></a>
+</h3>
 <p>Here’s an exponentially weighted moving average:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">window_sizes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">10</span>, <span class="fl">20</span>, <span class="fl">50</span><span class="op">)</span></span>
 <span><span class="va">column_names</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"window_size_"</span>, <span class="va">window_sizes</span>, sep<span class="op">=</span><span class="st">""</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">acc</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">slice</span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">4000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">bind_cols</span><span class="op">(</span><span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/slice.html" class="external-link">slice</a></span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">4000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_cols</a></span><span class="op">(</span><span class="op">{</span></span>
 <span>    </span>
-<span>    <span class="va">vec</span> <span class="op">&lt;-</span> <span class="fu">pull</span><span class="op">(</span><span class="va">.</span>, <span class="va">mag</span><span class="op">)</span></span>
+<span>    <span class="va">vec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/pull.html" class="external-link">pull</a></span><span class="op">(</span><span class="va">.</span>, <span class="va">mag</span><span class="op">)</span></span>
 <span>    </span>
 <span>    <span class="fu">purrr</span><span class="fu">::</span><span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">map_dfc</a></span><span class="op">(</span><span class="va">window_sizes</span>, <span class="op">~</span> <span class="fu">pracma</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/pracma/man/movavg.html" class="external-link">movavg</a></span><span class="op">(</span><span class="va">vec</span>, <span class="va">.x</span>, type<span class="op">=</span><span class="st">"e"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>      <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">column_names</span><span class="op">)</span></span>
 <span>    </span>
 <span>  <span class="op">}</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">select</span><span class="op">(</span><span class="va">timestamp</span>, <span class="fu">matches</span><span class="op">(</span><span class="st">"mag|window"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">timestamp</span>, <span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">matches</a></span><span class="op">(</span><span class="st">"mag|window"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu">pivot_and_plot</span><span class="op">(</span><span class="va">timestamp</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">gghighlight</span><span class="op">(</span><span class="fu">str_detect</span><span class="op">(</span><span class="va">name</span>, <span class="st">"window"</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">facet_wrap</span><span class="op">(</span><span class="op">~</span><span class="va">name</span><span class="op">)</span></span>
@@ -197,25 +197,25 @@
 <span><span class="co">#&gt; label_key: name</span></span></code></pre></div>
 <p><img src="assignment1_files/figure-html/unnamed-chunk-9-1.png" width="700"></p>
 </div>
-<div class="section level4">
-<h4 id="median-filter">Median Filter<a class="anchor" aria-label="anchor" href="#median-filter"></a>
-</h4>
+<div class="section level3">
+<h3 id="median-filter">Median Filter<a class="anchor" aria-label="anchor" href="#median-filter"></a>
+</h3>
 <p>Lastly, we’ll try the median filter</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">window_sizes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">12</span>, <span class="fl">19</span>, <span class="fl">51</span><span class="op">)</span></span>
 <span><span class="va">column_names</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"window_size_"</span>, <span class="va">window_sizes</span>, sep<span class="op">=</span><span class="st">""</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">acc</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">slice</span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">3000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">bind_cols</span><span class="op">(</span><span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/slice.html" class="external-link">slice</a></span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">3000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_cols</a></span><span class="op">(</span><span class="op">{</span></span>
 <span>    </span>
-<span>    <span class="va">vec</span> <span class="op">&lt;-</span> <span class="fu">pull</span><span class="op">(</span><span class="va">.</span>, <span class="va">mag</span><span class="op">)</span></span>
+<span>    <span class="va">vec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/pull.html" class="external-link">pull</a></span><span class="op">(</span><span class="va">.</span>, <span class="va">mag</span><span class="op">)</span></span>
 <span>    </span>
 <span>    <span class="fu">purrr</span><span class="fu">::</span><span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">map_dfc</a></span><span class="op">(</span><span class="va">window_sizes</span>, <span class="op">~</span> <span class="fu">zoo</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/zoo/man/rollmean.html" class="external-link">rollmedian</a></span><span class="op">(</span><span class="va">vec</span>, <span class="va">.x</span>, fill<span class="op">=</span><span class="cn">NA</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>      <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">column_names</span><span class="op">)</span></span>
 <span>    </span>
 <span>  <span class="op">}</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">select</span><span class="op">(</span><span class="va">timestamp</span>, <span class="fu">matches</span><span class="op">(</span><span class="st">"mag|window"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">timestamp</span>, <span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">matches</a></span><span class="op">(</span><span class="st">"mag|window"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu">pivot_and_plot</span><span class="op">(</span><span class="va">timestamp</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">gghighlight</span><span class="op">(</span><span class="fu">str_detect</span><span class="op">(</span><span class="va">name</span>, <span class="st">"window"</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">facet_wrap</span><span class="op">(</span><span class="op">~</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
@@ -223,14 +223,14 @@
 <p>These methods aren’t doing a fantastic job, but we can keep trying in the frequency domain</p>
 </div>
 </div>
-<div class="section level3">
-<h3 id="convert-to-frequency-domain-data">Convert to Frequency Domain Data<a class="anchor" aria-label="anchor" href="#convert-to-frequency-domain-data"></a>
-</h3>
+<div class="section level2">
+<h2 id="frequency-domain-data">Frequency Domain Data<a class="anchor" aria-label="anchor" href="#frequency-domain-data"></a>
+</h2>
 <p>We can use the <code><a href="https://rdrr.io/r/stats/fft.html" class="external-link">stats::fft</a></code> function to convert to the frequency domain:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">freq</span> <span class="op">&lt;-</span> <span class="va">acc</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">slice</span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">4000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">pull</span><span class="op">(</span><span class="va">mag</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/slice.html" class="external-link">slice</a></span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">4000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/pull.html" class="external-link">pull</a></span><span class="op">(</span><span class="va">mag</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/fft.html" class="external-link">fft</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/complex.html" class="external-link">Mod</a></span><span class="op">(</span><span class="va">freq</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
@@ -247,17 +247,17 @@
 <span>  type<span class="op">=</span><span class="st">"pass"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">acc</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">slice</span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">3000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">mutate</span><span class="op">(</span>filtered <span class="op">=</span> <span class="fu">signal</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/signal/man/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">b_filt</span>, <span class="va">mag</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">select</span><span class="op">(</span><span class="va">timestamp</span>, <span class="va">mag</span>, <span class="va">filtered</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/slice.html" class="external-link">slice</a></span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">3000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>filtered <span class="op">=</span> <span class="fu">signal</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/signal/man/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">b_filt</span>, <span class="va">mag</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">timestamp</span>, <span class="va">mag</span>, <span class="va">filtered</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu">pivot_and_plot</span><span class="op">(</span><span class="va">timestamp</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">gghighlight</span><span class="op">(</span><span class="va">name</span> <span class="op">==</span> <span class="st">"filtered"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="assignment1_files/figure-html/unnamed-chunk-12-1.png" width="700"></p>
 <p>This signal looks better.</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">acc</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">slice</span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">3000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">mutate</span><span class="op">(</span>filtered <span class="op">=</span> <span class="fu">signal</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/signal/man/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">b_filt</span>, <span class="va">mag</span><span class="op">)</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="va">acc_filtered</span></span></code></pre></div>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/slice.html" class="external-link">slice</a></span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">3000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>filtered <span class="op">=</span> <span class="fu">signal</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/signal/man/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">b_filt</span>, <span class="va">mag</span><span class="op">)</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="va">acc_filtered</span></span></code></pre></div>
 <p>If we smooth this…</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
@@ -265,28 +265,28 @@
 <span><span class="va">column_names</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"window_size_"</span>, <span class="va">window_sizes</span>, sep<span class="op">=</span><span class="st">""</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">acc_filtered</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">bind_cols</span><span class="op">(</span><span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_cols</a></span><span class="op">(</span><span class="op">{</span></span>
 <span>    </span>
-<span>    <span class="va">vec</span> <span class="op">&lt;-</span> <span class="fu">pull</span><span class="op">(</span><span class="va">.</span>, <span class="va">filtered</span><span class="op">)</span></span>
+<span>    <span class="va">vec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/pull.html" class="external-link">pull</a></span><span class="op">(</span><span class="va">.</span>, <span class="va">filtered</span><span class="op">)</span></span>
 <span>    </span>
 <span>    <span class="fu">purrr</span><span class="fu">::</span><span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">map_dfc</a></span><span class="op">(</span><span class="va">window_sizes</span>, <span class="op">~</span> <span class="fu">zoo</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/zoo/man/rollmean.html" class="external-link">rollmedian</a></span><span class="op">(</span><span class="va">vec</span>, <span class="va">.x</span>, fill<span class="op">=</span><span class="cn">NA</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>      <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">column_names</span><span class="op">)</span></span>
 <span>    </span>
 <span>  <span class="op">}</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">select</span><span class="op">(</span><span class="va">timestamp</span>, <span class="fu">matches</span><span class="op">(</span><span class="st">"filtered|window"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">timestamp</span>, <span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">matches</a></span><span class="op">(</span><span class="st">"filtered|window"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu">pivot_and_plot</span><span class="op">(</span><span class="va">timestamp</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">gghighlight</span><span class="op">(</span><span class="fu">str_detect</span><span class="op">(</span><span class="va">name</span>, <span class="st">"window"</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">facet_wrap</span><span class="op">(</span><span class="op">~</span><span class="va">name</span><span class="op">)</span></span></code></pre></div>
 <p><img src="assignment1_files/figure-html/unnamed-chunk-14-1.png" width="700"></p>
 <p>We can see that smoothing is more effective. We’ll wrap the above in a function.</p>
 </div>
-<div class="section level3">
-<h3 id="a-pipeline-for-data-cleaning">A Pipeline for Data Cleaning<a class="anchor" aria-label="anchor" href="#a-pipeline-for-data-cleaning"></a>
-</h3>
+<div class="section level2">
+<h2 id="a-pipeline-for-data-cleaning">A Pipeline for Data Cleaning<a class="anchor" aria-label="anchor" href="#a-pipeline-for-data-cleaning"></a>
+</h2>
 <p>We use two wrapper functions for the above processes:</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">acc</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">mutate</span><span class="op">(</span>clean_signal <span class="op">=</span> <span class="va">mag</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>clean_signal <span class="op">=</span> <span class="va">mag</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>           <span class="fu">filter_signal</span><span class="op">(</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
 <span>           <span class="fu">smooth_signal</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fl">20</span><span class="op">)</span></span>
@@ -314,27 +314,27 @@
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">19</span> 2022-09-22 <span style="color: #949494;">00:38:26</span> -<span style="color: #BB0000;">0.528</span>  -<span style="color: #BB0000;">2.56</span>  -<span style="color: #BB0000;">9.96</span> 10.3         3.35 </span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">20</span> 2022-09-22 <span style="color: #949494;">00:38:26</span> -<span style="color: #BB0000;">0.542</span>  -<span style="color: #BB0000;">2.42</span> -<span style="color: #BB0000;">10.2</span>  10.5         3.02</span></span></code></pre></div>
 </div>
-<div class="section level3">
-<h3 id="detecting-steps">Detecting Steps<a class="anchor" aria-label="anchor" href="#detecting-steps"></a>
-</h3>
+<div class="section level2">
+<h2 id="detecting-steps">Detecting Steps<a class="anchor" aria-label="anchor" href="#detecting-steps"></a>
+</h2>
 <p>Finally, it’s time to detect steps.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">acc_clean</span> <span class="op">&lt;-</span> <span class="va">acc</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">mutate</span><span class="op">(</span>clean_signal <span class="op">=</span> <span class="va">mag</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>clean_signal <span class="op">=</span> <span class="va">mag</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>           <span class="fu">filter_signal</span><span class="op">(</span>low_pass <span class="op">=</span> <span class="fl">0.1</span>, high_pass <span class="op">=</span> <span class="fl">1.5</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
 <span>           <span class="fu">smooth_signal</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">select</span><span class="op">(</span><span class="va">timestamp</span>, <span class="va">clean_signal</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">timestamp</span>, <span class="va">clean_signal</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">acc_clean</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">slice</span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">3000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/slice.html" class="external-link">slice</a></span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">3000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu">ggplot</span><span class="op">(</span><span class="fu">aes</span><span class="op">(</span>x<span class="op">=</span><span class="va">timestamp</span>, y<span class="op">=</span><span class="va">clean_signal</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">geom_line</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p><img src="assignment1_files/figure-html/unnamed-chunk-16-1.png" width="700"></p>
-<p>Let’s try zero crossings to grab the moments that the signal goes over zero:</p>
+<p>Let’s try zero crossings to grab the moments that the signal goes over zero using <code>modelbased</code>:</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">acc_clean</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">slice</span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">3000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">summarise</span><span class="op">(</span>n_steps <span class="op">=</span> <span class="fu">modelbased</span><span class="fu">::</span><span class="fu"><a href="https://easystats.github.io/modelbased/reference/zero_crossings.html" class="external-link">zero_crossings</a></span><span class="op">(</span><span class="va">clean_signal</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/slice.html" class="external-link">slice</a></span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">3000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarise</a></span><span class="op">(</span>n_steps <span class="op">=</span> <span class="fu">modelbased</span><span class="fu">::</span><span class="fu"><a href="https://easystats.github.io/modelbased/reference/zero_crossings.html" class="external-link">zero_crossings</a></span><span class="op">(</span><span class="va">clean_signal</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>              <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 1</span></span></span>
 <span><span class="co">#&gt;   n_steps</span></span>
@@ -343,8 +343,8 @@
 <p>Here’s peak detection from <code>quantmod</code>:</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">acc_clean</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">slice</span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">3000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">summarise</span><span class="op">(</span>n_steps <span class="op">=</span> <span class="fu">quantmod</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/quantmod/man/peak.html" class="external-link">findPeaks</a></span><span class="op">(</span><span class="va">clean_signal</span>, thresh <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/slice.html" class="external-link">slice</a></span><span class="op">(</span><span class="fl">2000</span><span class="op">:</span><span class="fl">3000</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarise</a></span><span class="op">(</span>n_steps <span class="op">=</span> <span class="fu">quantmod</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/quantmod/man/peak.html" class="external-link">findPeaks</a></span><span class="op">(</span><span class="va">clean_signal</span>, thresh <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>              <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Registered S3 method overwritten by 'quantmod':</span></span>
 <span><span class="co">#&gt;   method            from</span></span>
@@ -357,23 +357,51 @@
 <div class="section level2">
 <h2 id="conclusion">Conclusion<a class="anchor" aria-label="anchor" href="#conclusion"></a>
 </h2>
-<p>Here’s a fully fledged pipeline function for this pipeline:</p>
+<p>Here’s a fully-fledged function for this algorithm:</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">detect_steps</span><span class="op">(</span><span class="fu">here</span><span class="op">(</span><span class="st">"inst"</span>,<span class="st">"extdata"</span>, <span class="st">"acce.csv"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 15,179 × 7</span></span></span>
-<span><span class="co">#&gt;    timestamp               X     Y     Z   mag clean_signal step  </span></span>
-<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;dttm&gt;</span>              <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dttm&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> 2022-09-22 <span style="color: #949494;">00:38:26</span> 0.736 -<span style="color: #BB0000;">3.71</span> -<span style="color: #BB0000;">9.57</span> 10.3       <span style="color: #BB0000;">NA</span>      <span style="color: #BB0000;">NA</span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span> 2022-09-22 <span style="color: #949494;">00:38:26</span> 0.865 -<span style="color: #BB0000;">3.38</span> -<span style="color: #BB0000;">9.50</span> 10.1       <span style="color: #BB0000;">NA</span>      <span style="color: #BB0000;">NA</span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span> 2022-09-22 <span style="color: #949494;">00:38:26</span> 0.969 -<span style="color: #BB0000;">3.04</span> -<span style="color: #BB0000;">9.46</span>  9.98       0.018<span style="text-decoration: underline;">9</span> <span style="color: #BB0000;">NA</span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span> 2022-09-22 <span style="color: #949494;">00:38:26</span> 0.875 -<span style="color: #BB0000;">3.15</span> -<span style="color: #BB0000;">9.34</span>  9.90       0.045<span style="text-decoration: underline;">6</span> <span style="color: #BB0000;">NA</span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span> 2022-09-22 <span style="color: #949494;">00:38:26</span> 0.899 -<span style="color: #BB0000;">3.37</span> -<span style="color: #BB0000;">9.24</span>  9.88       0.089<span style="text-decoration: underline;">4</span> <span style="color: #BB0000;">NA</span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span> 2022-09-22 <span style="color: #949494;">00:38:26</span> 0.767 -<span style="color: #BB0000;">3.53</span> -<span style="color: #BB0000;">9.01</span>  9.70       0.153  <span style="color: #BB0000;">NA</span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span> 2022-09-22 <span style="color: #949494;">00:38:26</span> 0.623 -<span style="color: #BB0000;">3.60</span> -<span style="color: #BB0000;">8.77</span>  9.50       0.238  <span style="color: #BB0000;">NA</span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> 2022-09-22 <span style="color: #949494;">00:38:26</span> 0.650 -<span style="color: #BB0000;">3.77</span> -<span style="color: #BB0000;">8.78</span>  9.57       0.345  <span style="color: #BB0000;">NA</span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> 2022-09-22 <span style="color: #949494;">00:38:26</span> 0.994 -<span style="color: #BB0000;">4.41</span> -<span style="color: #BB0000;">8.58</span>  9.69       0.476  <span style="color: #BB0000;">NA</span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> 2022-09-22 <span style="color: #949494;">00:38:26</span> 0.426 -<span style="color: #BB0000;">4.60</span> -<span style="color: #BB0000;">8.20</span>  9.42       0.629  <span style="color: #BB0000;">NA</span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># … with 15,169 more rows</span></span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">steps_df</span> <span class="op">&lt;-</span> <span class="fu">detect_steps</span><span class="op">(</span><span class="fu">here</span><span class="op">(</span><span class="st">"inst"</span>,<span class="st">"extdata"</span>, <span class="st">"acce.csv"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>Let’s use this algorithm to detect steps for different scenarios. We took ~100 paces with the phone in hand, a backpack, and pocket (NB: we’re tinkering with these values here; future directions might try to automatically find the most accurate values programmatically with a grid search):</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">hand_steps</span> <span class="op">&lt;-</span> </span>
+<span>  <span class="fu">detect_steps</span><span class="op">(</span><span class="fu">here</span><span class="op">(</span><span class="st">"inst"</span>, <span class="st">"extdata"</span>, <span class="st">"hand.csv"</span><span class="op">)</span>,</span>
+<span>               low_pass <span class="op">=</span> <span class="fl">0.9</span>,</span>
+<span>               high_pass <span class="op">=</span> <span class="fl">0.85</span>,</span>
+<span>               smoothing_window_size <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>               smoothing_type <span class="op">=</span> <span class="st">"ewma"</span>,</span>
+<span>               detection_type <span class="op">=</span> <span class="st">"zero_crossings"</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarise</a></span><span class="op">(</span>n_steps <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">step</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">pack_steps</span> <span class="op">&lt;-</span> </span>
+<span>  <span class="fu">detect_steps</span><span class="op">(</span><span class="fu">here</span><span class="op">(</span><span class="st">"inst"</span>, <span class="st">"extdata"</span>, <span class="st">"backpack.csv"</span><span class="op">)</span>,</span>
+<span>               low_pass <span class="op">=</span> <span class="fl">0.9</span>,</span>
+<span>               high_pass <span class="op">=</span> <span class="fl">0.85</span>,</span>
+<span>               smoothing_window_size <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>               smoothing_type <span class="op">=</span> <span class="st">"ewma"</span>,</span>
+<span>               detection_type <span class="op">=</span> <span class="st">"zero_crossings"</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarise</a></span><span class="op">(</span>n_steps <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">step</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">pocket_steps</span> <span class="op">&lt;-</span> </span>
+<span>  <span class="fu">detect_steps</span><span class="op">(</span><span class="fu">here</span><span class="op">(</span><span class="st">"inst"</span>, <span class="st">"extdata"</span>, <span class="st">"pocket.csv"</span><span class="op">)</span>,</span>
+<span>               low_pass <span class="op">=</span> <span class="fl">0.9</span>,</span>
+<span>               high_pass <span class="op">=</span> <span class="fl">0.85</span>,</span>
+<span>               smoothing_window_size <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>               smoothing_type <span class="op">=</span> <span class="st">"ewma"</span>,</span>
+<span>               detection_type <span class="op">=</span> <span class="st">"zero_crossings"</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarise</a></span><span class="op">(</span>n_steps <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">step</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">hand_steps</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_rows</a></span><span class="op">(</span><span class="va">pack_steps</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_rows</a></span><span class="op">(</span><span class="va">pocket_steps</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>Scenario <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"In hand"</span>, <span class="st">"In backpack"</span>, <span class="st">"In pocket"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>datalogger <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">102</span>, <span class="fl">98</span>, <span class="fl">97</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">Scenario</span>, `Steps Reported by Datalogger`<span class="op">=</span><span class="va">datalogger</span>, `Steps Detected` <span class="op">=</span> <span class="va">n_steps</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 3</span></span></span>
+<span><span class="co">#&gt;   Scenario    `Steps Reported by Datalogger` `Steps Detected`</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                                <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;int&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> In hand                                102               97</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> In backpack                             98               91</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> In pocket                               97               92</span></span></code></pre></div>
+<p>Interestingly, the algorithm always <em>underestimates</em>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
     </nav></aside>
@@ -383,7 +411,7 @@
 
     <footer><div class="pkgdown-footer-left">
   <p></p>
-<p>Developed by The package maintainer.</p>
+<p>Developed by Tinashe M. Tapera.</p>
 </div>
 
 <div class="pkgdown-footer-right">
