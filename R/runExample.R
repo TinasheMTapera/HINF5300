@@ -4,7 +4,7 @@
 #' @return NULL
 #' @export
 
-runExample <- function(example, wd=".") {
+runExample <- function(example, output_directory) {
 
   template <- system.file("rmd", "step_detection", "step_detection.Rmd", package = "HINF5300")
 

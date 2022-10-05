@@ -8,10 +8,6 @@ params:
     input: file
     label: "Input dataset from Datalogger:"
     value:
-  outputdir:
-    input: text
-    label: "Output directory:"
-    value: ""
   low_pass:
     label: "Low Pass Cutoff:"
     value: 0.1
@@ -46,8 +42,6 @@ params:
     value: peak_detection
     input: select
     choices: [peak_detection, zero_crossings]
-#knit: (function(inputFile, encoding) {
-#  rmarkdown::render(inputFile, encoding = encoding, output_dir = "~/Downloads") })
 ---
 
 
