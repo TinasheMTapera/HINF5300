@@ -1,0 +1,38 @@
+---
+title: "Assignment 2: Activity Recognition"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Assignment 2: Activity Recognition}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(HINF5300)
+```
+
+In assignment 2, we're working on activity recognition. Given a large set of
+activity data from multiple participants, can we build a machine learning model
+that can detect what physical activity they are engaged in?
+
+## The Data
+
+The data comes from the [WIreless Sensor Data Mining group](https://www.cis.fordham.edu/wisdm/dataset.php)
+from Fordham University^[[Kwapisz et. al, 2011](https://doi.org/10.1145/1964897.1964918)]. We can get it from here:
+
+```{sh}
+cd /Users/tinashetapera/northeastern/classes/HINF5300/inst/extdata && curl https://www.cis.fordham.edu/wisdm/includes/datasets/latest/WISDM_ar_latest.tar.gz -O -L
+
+tar -xzvf WISDM_ar_latest.tar.gz
+
+rm WISDM_ar_latest.tar.gz
+```
+
+
