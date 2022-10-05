@@ -10,17 +10,26 @@ License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 Suggests: 
+    dplyr,
+    gghighlight,
+    ggplot2,
+    here,
     knitr,
+    lubridate,
+    modelbased,
+    purrr,
     rmarkdown,
-    tidyverse
+    stringr
 VignetteBuilder: knitr
 RoxygenNote: 7.2.1
 Imports: 
-    gghighlight,
-    here,
+    assertthat,
     magrittr,
     pracma,
     quantmod,
+    readr,
+    rlang,
     signal,
+    tidyr,
     zoo
 URL: https://tinashemtapera.github.io/HINF5300/

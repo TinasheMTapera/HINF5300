@@ -23,6 +23,7 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(stringr)
+library(here)
 
 # for plotting
 library(gghighlight)
@@ -298,5 +299,5 @@ acc_clean %>%
 Here's a fully fledged pipeline function for this pipeline:
 
 ```{r, warning=FALSE, message=FALSE}
-detect_steps(here::here("inst","extdata", "acce.csv"))
+detect_steps(here("inst","extdata", "acce.csv"))
 ```

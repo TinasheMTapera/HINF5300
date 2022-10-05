@@ -2,26 +2,29 @@
 #'
 #' @param inputpath the path to the DataLogger input file.
 #' @return A dataframe of accelerometer data.
+#' @export
 
-read_datalogger_file <- function(inputpath, ...) {
+read_datalogger_file <- function(inputpath) {
 
   assertthat::is.readable(inputpath)
 
   readr::read_csv(inputpath, col_names=FALSE) %>%
-    transmute(timestamp = X1, X = X2, Y = X3, Z = X4) %>%
-    mutate(timestamp = lubridate::as_datetime(timestamp/1000000000))
+    dplyr::transmute(timestamp = X1, X = X2, Y = X3, Z = X4) %>%
+    dplyr::mutate(timestamp = lubridate::as_datetime(timestamp/1000000000))
 
 }
 
+#' @export
 pivot_and_plot <- function(.data, not_pivoted) {
 
   .data %>%
-    pivot_longer(cols = -!!rlang::ensym(not_pivoted)) %>%
-    ggplot(aes(x=timestamp, y=value)) +
-    geom_line(aes(color=name)) +
+    tidyr::pivot_longer(cols = -!!rlang::ensym(not_pivoted)) %>%
+    ggplot2::ggplot(aes(x=timestamp, y=value)) +
+    ggplot2::geom_line(aes(color=name)) +
     NULL
 }
 
+#' @export
 filter_signal <- function(
     vec,
     low_pass=0.8,
@@ -42,6 +45,7 @@ filter_signal <- function(
 
 }
 
+#' @export
 smooth_signal <- function(vec, window_size=5, type="median") {
 
   if(type=="median") {
@@ -64,6 +68,7 @@ smooth_signal <- function(vec, window_size=5, type="median") {
 
 }
 
+#' @export
 detect_steps <- function(
     input_file,
     low_pass=0.1,
@@ -72,22 +77,39 @@ detect_steps <- function(
     smoothing_type="median",
     detection_type="zero_crossings") {
 
+  if(!(detection_type %in% c("zero_crossings", "peak_detection"))){
+
+    stop("Please select a peak detection algorithm from the
+following:\n\n\"peak_detection\"\n\"zero_crossings\"\n")
+  }
+
+  if(!(smoothing_type %in% c("median", "mean", "ewma"))){
+
+    stop("Please select a smoothing algorithm from the
+following:\n\n\"mean\"\n\"median\"\n\"ewma\"\n")
+  }
+
   clean_data <- read_datalogger_file(input_file) %>%
-    mutate(mag = sqrt((X^2 + Y^2 + Z^2))) %>%
-    mutate(clean_signal = mag %>%
+    dplyr::mutate(mag = sqrt((X^2 + Y^2 + Z^2))) %>%
+    dplyr::mutate(clean_signal = mag %>%
              filter_signal(low_pass, high_pass) %>%
              smooth_signal(smoothing_window_size, smoothing_type))
 
   if(detection_type == "zero_crossings") {
     output <- clean_data %>%
-      summarise(n_steps = modelbased::zero_crossings(clean_signal) %>%
-                  length())
-  } else {
+      dplyr::summarise(steps = modelbased::zero_crossings(clean_signal) %>% as.integer()) %>%
+      dplyr::pull(steps)
+  } else if(detection_type == "peak_detection") {
     output <- clean_data %>%
-      summarise(n_steps = quantmod::findPeaks(clean_signal, thresh = 0) %>%
-                  length())
+      dplyr::summarise(steps = quantmod::findPeaks(clean_signal, thresh = 0)  %>% as.integer()) %>%
+      dplyr::pull(steps)
   }
 
-  return(list("data"=clean_data, "steps_detected"=output))
+  clean_data$step <- NA
+  clean_data$step[output] <- TRUE
+
+  clean_data %>%
+    mutate(step = ifelse(step, timestamp, NA) %>%
+             lubridate::as_datetime())
 
 }

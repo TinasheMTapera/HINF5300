@@ -1,0 +1,133 @@
+---
+title: "HINF5300 Step Detection Algorithm"
+author: "Tinashe M. Tapera"
+output: html_document
+date: "`r Sys.Date()`"
+params:
+  inputfile: "../../extdata/acce.csv"
+  low_pass:
+    label: "Low Pass Cutoff"
+    value: 0.1
+    input: slider
+    min: 0.1
+    max: 10
+    step: 0.1
+    sep: ""
+  high_pass:
+    label: "High Pass Cutoff"
+    value: 1.5
+    input: slider
+    min: 0.1
+    max: 10
+    step: 0.1
+    sep: ""
+  smoothing_window_size:
+    label: "Smoothing Window Size"
+    value: 5
+    input: slider
+    min: 2
+    max: 100
+    step: 1
+    sep: ""
+  smoothing_type:
+    label: "Smoothing Algorithm:"
+    value: median
+    input: select
+    choices: [median, mean, ewma]
+  detection_type:
+    label: "Step Detection Algorithm"
+    value: peak_detection
+    input: select
+    choices: [peak_detection, zero_crossings]
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE)
+exported_format <- lubridate:::format.Duration
+```
+
+```{r, include=FALSE}
+library(HINF5300)
+library(tidyr)
+library(ggplot2)
+library(dplyr)
+library(gghighlight)
+library(patchwork)
+library(lubridate)
+
+outputs <- detect_steps(params$inputfile, params$low_pass, params$high_pass, params$smoothing_window_size, params$smoothing_type, params$detection_type)
+```
+
+```{r}
+three_ax_plot <- outputs %>%
+  select(timestamp, X, Y, Z) %>%
+  pivot_longer(-c(timestamp)) %>%
+  ggplot(aes(x=timestamp, y=value, colour=name)) +
+  geom_line(alpha=0.4) +
+  theme_minimal() +
+  labs(title="Raw Signal",
+       y="Acceleration (m/s^2)",
+       x="Timestamp"
+       ) +
+  scale_color_discrete(name = "Axis")
+```
+
+```{r}
+mag_plot <- outputs %>%
+  select(timestamp, X, Y, Z, Magnitude=mag) %>%
+  pivot_longer(-c(timestamp)) %>%
+  ggplot(aes(x=timestamp, y=value, colour=name)) +
+  geom_line(alpha=0.75) +
+  theme_minimal() +
+  labs(title="Combined Signal",
+       y="Acceleration (m/s^2)",
+       x="Timestamp"
+       ) +
+  gghighlight(name == "Magnitude")
+```
+
+```{r}
+cleaned_plot <- outputs %>%
+  select(timestamp, Magnitude=mag, `Clean Signal`=clean_signal) %>%
+  pivot_longer(-c(timestamp)) %>%
+  ggplot(aes(x=timestamp, y=value, colour=name)) +
+  geom_line(alpha=0.75) +
+  theme_minimal() +
+  labs(title="Filtered + Smoothed Signal",
+       y="Acceleration (m/s^2)",
+       x="Timestamp"
+       ) +
+  gghighlight(name == "Clean Signal", )
+```
+
+```{r}
+steps_plot <- outputs %>%
+  select(timestamp, `Clean Signal`=clean_signal, step) %>%
+  ggplot(aes(x=timestamp, y=`Clean Signal`)) +
+  geom_line(alpha=0.65) +
+  geom_point(aes(x=step, y=`Clean Signal`), colour="red", alpha=0.8, shape="x", size=5) +
+  theme_minimal() +
+  labs(title="Steps Detected",
+       y="Acceleration (m/s^2)",
+       x="Timestamp"
+       )
+```
+
+Selected Parameters:
+
+```{r, results='asis', comment = "", collapse=TRUE}
+cat(paste(names(params), params, sep = ": ", collapse = "\n\n"))
+```
+
+```{r, fig.width=12, fig.height=18}
+three_ax_plot + 
+  mag_plot + 
+  cleaned_plot +
+  steps_plot +
+  plot_layout(nrow = 4) +
+  plot_annotation(title = 'Step Detection Algorithm Results')
+```
+
+The algorithm detected `r outputs %>% filter(!is.na(step)) %>% nrow()` steps through a duration of `r difftime(outputs$timestamp[length(outputs$timestamp)], outputs$timestamp[1]) %>% lubridate::as.duration() %>% exported_format()`.
+
