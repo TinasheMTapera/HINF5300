@@ -8,7 +8,7 @@ runExample <- function(example) {
 
   fpath <- system.file("rmd", "step_detection", "step_detection.Rmd", package = "HINF5300")
   if(example == "assignment1") {
-    rmarkdown::render(fpath, params = "ask")
+    rmarkdown::knit_params_ask(fpath)
   }
 
   browseURL(file.path(dirname(fpath), "step_detection.html"))
