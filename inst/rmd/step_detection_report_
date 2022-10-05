@@ -1,0 +1,30 @@
+---
+title: "HINF5300 Step Detection Algorithm"
+output: html_document
+date: "`r Sys.Date()`"
+params:
+  inputfile: "`r here()`"
+  low_pass: 0.1
+  high_pass: 1.5
+  smoothing_window_size: 5
+  smoothing_type: median
+  detection_type: zero_crossings
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+print(params$inputfile)
+```
+
+
+```{r, include=FALSE}
+library(HINF5300)
+library(tidyverse)
+
+print(params$inputfile)
+
+#outputs <- detect_steps(params$inputfile, params$low_pass, params$high_pass, params$smoothing_window_size, params$smoothing_type, params$detection_type)
+```

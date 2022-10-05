@@ -14,10 +14,15 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup}
-# general
+```{r setup, include=FALSE}
+# package functions
 library(HINF5300)
-library(tidyverse)
+
+# general
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(stringr)
 
 # for plotting
 library(gghighlight)
@@ -34,7 +39,7 @@ to detect steps.
 
 ## Cursory Glance
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 acc <- read_datalogger_file(system.file("extdata", "acce.csv", package = "HINF5300"))
 ```
 
@@ -76,8 +81,7 @@ acc %>%
 To combine the signal from different axes, we calculate the magnitude of
 the combined vectors.
 
-```{r}
-#| warning: false
+```{r, warning=FALSE}
 acc <-
   acc %>%
   mutate(mag = sqrt((X^2 + Y^2 + Z^2)))
@@ -151,7 +155,7 @@ acc %>%
 
 Lastly, we'll try the median filter
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 window_sizes <- c(5, 12, 19, 51)
 column_names <- paste0("window_size_", window_sizes, sep="")
 
@@ -192,7 +196,7 @@ So what we're seeing here are the high amplitudes of noise at the very high
 and very low frequencies. We can implement a filter to get rid
 of slow peaks and jumpy peaks.
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 cutoff <- c(0.8, 3.5)
 b_filt <- signal::butter(
   3, 
@@ -206,13 +210,6 @@ acc %>%
   mutate(filtered = signal::filter(b_filt, mag)) %>%
   select(timestamp, mag, filtered) %>%
   pivot_and_plot(timestamp) +
-#   pivot_longer(-timestamp) %>%
-#   filter(name == "mag" | name == "filtered") %>%
-#   mutate(alpha = ifelse(name == "filtered", 0.5, 0.2)) -> acc_plot
-# 
-# ggplot(acc_plot) +
-#   geom_line(aes(x=timestamp, y=value)
-#             ) +
   gghighlight(name == "filtered")
 ```
 
@@ -226,7 +223,7 @@ acc %>%
 
 If we smooth this...
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 
 window_sizes <- c(5, 12, 19, 51)
 column_names <- paste0("window_size_", window_sizes, sep="")
@@ -300,6 +297,6 @@ acc_clean %>%
 
 Here's a fully fledged pipeline function for this pipeline:
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 detect_steps(here::here("inst","extdata", "acce.csv"))
 ```

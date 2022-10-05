@@ -1,0 +1,19 @@
+---
+title: "Try it Yourself!"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Try it Yourself!}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(HINF5300)
+```
