@@ -179,7 +179,7 @@ acc %>%
 These methods aren't doing a fantastic job, but we can keep trying in the
 frequency domain
 
-## Convert to Frequency Domain Data
+## Frequency Domain Data
 
 We can use the `stats::fft` function to convert to the frequency domain:
 
@@ -275,7 +275,7 @@ acc_clean %>%
   geom_line()
 ```
 
-Let's try zero crossings to grab the moments that the signal goes over zero:
+Let's try zero crossings to grab the moments that the signal goes over zero using `modelbased`:
 
 ```{r}
 acc_clean %>%
@@ -294,10 +294,51 @@ acc_clean %>%
               length())
 ```
 
-# Conclusion
+## Conclusion
 
-Here's a fully fledged pipeline function for this pipeline:
+Here's a fully-fledged function for this algorithm:
 
 ```{r, warning=FALSE, message=FALSE}
-detect_steps(here("inst","extdata", "acce.csv"))
+steps_df <- detect_steps(here("inst","extdata", "acce.csv"))
 ```
+
+Let's use this algorithm to detect steps for different scenarios. We took ~100 paces with the phone in hand, a backpack, and pocket (NB: we're tinkering with these values here; future directions might try
+to automatically find the most accurate values programmatically with a grid search):
+
+```{r, warning=FALSE, message=FALSE}
+hand_steps <- 
+  detect_steps(here("inst", "extdata", "hand.csv"),
+               low_pass = 0.9,
+               high_pass = 0.85,
+               smoothing_window_size = 5,
+               smoothing_type = "ewma",
+               detection_type = "zero_crossings") %>%
+  summarise(n_steps = sum(!is.na(step)))
+
+pack_steps <- 
+  detect_steps(here("inst", "extdata", "backpack.csv"),
+               low_pass = 0.9,
+               high_pass = 0.85,
+               smoothing_window_size = 5,
+               smoothing_type = "ewma",
+               detection_type = "zero_crossings") %>%
+  summarise(n_steps = sum(!is.na(step)))
+
+pocket_steps <- 
+  detect_steps(here("inst", "extdata", "pocket.csv"),
+               low_pass = 0.9,
+               high_pass = 0.85,
+               smoothing_window_size = 5,
+               smoothing_type = "ewma",
+               detection_type = "zero_crossings") %>%
+  summarise(n_steps = sum(!is.na(step)))
+
+hand_steps %>%
+  bind_rows(pack_steps) %>%
+  bind_rows(pocket_steps) %>%
+  mutate(Scenario = c("In hand", "In backpack", "In pocket")) %>%
+  mutate(datalogger = c(102, 98, 97)) %>%
+  select(Scenario, `Steps Reported by Datalogger`=datalogger, `Steps Detected` = n_steps)
+```
+
+Interestingly, the algorithm always _underestimates_.

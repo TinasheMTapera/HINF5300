@@ -17,3 +17,23 @@ knitr::opts_chunk$set(
 ```{r setup}
 library(HINF5300)
 ```
+
+## Installation
+
+You can install this package from Github using `remotes`:
+
+```{r, eval=FALSE}
+# install.packages("remotes") # if necessary
+remotes::install_github("TinasheMTapera/HINF5300")
+```
+
+Or with the source files, by opening this `.Rproj` file in RStudio and clicking
+the `Install` button under the Build tab.
+
+## Assignment 1
+
+You can try assignment 1's step detection algorithm by first using the Datalogger
+iOS or Android app to collect raw accelerometer data. Then, once that CSV file is on your machine with this package installed,
+simply do `HINF5300::runExamples("assignment1")`. A pop up window will ask you
+to type the path to your data and set the parameters for step detection as described in the
+notebook. Submitting the data will produce a pretty step detection report for you. It's also possible to do this in R with `HINF5300::detect_steps(<YOUR FILE>, <PARAMS>)` which will return a data frame that you can plot yourself.

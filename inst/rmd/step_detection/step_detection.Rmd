@@ -4,9 +4,16 @@ author: "Tinashe M. Tapera"
 output: html_document
 date: "`r Sys.Date()`"
 params:
-  inputfile: "../../extdata/acce.csv"
+  inputfile: 
+    input: file
+    label: "Input dataset from Datalogger:"
+    value:
+  outputdir:
+    input: text
+    label: "Output directory:"
+    value: ""
   low_pass:
-    label: "Low Pass Cutoff"
+    label: "Low Pass Cutoff:"
     value: 0.1
     input: slider
     min: 0.1
@@ -14,7 +21,7 @@ params:
     step: 0.1
     sep: ""
   high_pass:
-    label: "High Pass Cutoff"
+    label: "High Pass Cutoff:"
     value: 1.5
     input: slider
     min: 0.1
@@ -22,7 +29,7 @@ params:
     step: 0.1
     sep: ""
   smoothing_window_size:
-    label: "Smoothing Window Size"
+    label: "Smoothing Window Size:"
     value: 5
     input: slider
     min: 2
@@ -35,10 +42,12 @@ params:
     input: select
     choices: [median, mean, ewma]
   detection_type:
-    label: "Step Detection Algorithm"
+    label: "Step Detection Algorithm:"
     value: peak_detection
     input: select
     choices: [peak_detection, zero_crossings]
+#knit: (function(inputFile, encoding) {
+#  rmarkdown::render(inputFile, encoding = encoding, output_dir = "~/Downloads") })
 ---
 
 
