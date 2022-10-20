@@ -1,0 +1,342 @@
+---
+subtitle: "\"Measuring Daily Activity Rhythms in Young Adults at Risk of Affective Instability Using Passively Collected Smartphone Data: Observational Study\""
+title: "HINF5300 Paper Presentation 1"
+author: "Tinashe M. Tapera"
+format: 
+  revealjs:
+    #incremental: true
+    theme: serif
+    chalkboard: true
+    slide-number: true
+from: markdown+emoji
+preview-links: true
+editor: 
+  markdown: 
+    wrap: 72
+---
+
+## Introduction to the problem
+
+::: columns
+::: {.column width="50%"}
+::: incremental
+-   mHealth is great!
+    -   Ease of use
+    -   Ease of implementation
+    -   Loads of data
+:::
+
+![](https://c.tenor.com/AkkCayzhTHQAAAAC/my-phone-brings-me-joy-joy.gif){.absolute bottom=0 left=0 width="450" height="280"}
+:::
+
+::: {.column width="50%"}
+::: incremental
+- So many sensors, and so much longitudinal data
+- Validity: _How do we know we're using the best models?_
+:::
+:::
+
+![](https://www.mdpi.com/sensors/sensors-19-02164/article_deploy/html/images/sensors-19-02164-g002.png){.absolute bottom=0 right=0 width="500" height="280"}
+:::
+
+
+
+
+
+------------------------------------------------------------------------
+
+![Longitudinal data demonstrates seasonality, trends, or
+cycles](https://www.mdpi.com/tropicalmed/tropicalmed-07-00171/article_deploy/html/images/tropicalmed-07-00171-g004.png)
+
+------------------------------------------------------------------------
+
+### Human beings also have many cycles
+
+::: incremental
+-   Steps
+-   Hormonal cycles
+-   Circadian rhythm
+-   Time spent on different **activities**
+    -   Annual "return to gym"
+    -   \% of time indoors vs outdoors
+    -   Amount of time spent driving
+    -   More examples?
+:::
+
+##  {background-color="black" background-image="https://images.unsplash.com/photo-1606103836293-0a063ee20566?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1771&q=80"}
+
+::: incremental
+-   Unstable cycles predict poorer health outcomes.
+
+- We know this from diarised self-reports of activity.
+
+-   It's important to make sure we're using *appropriate* models to capture activity
+
+-   "All models are wrong, but some are useful."
+:::
+
+## Study Objectives
+
+::: callout-note
+## The "Gap"
+
+> Despite the potential of mHealth data, statistical models that
+> translate these data into interpretable measures of diurnal rhythms
+> and markers to manage mental health are \[still\] an active area of
+> research
+:::
+
+1.  "...use smartphone sensors and activity data to quantify... \[a\]
+    participant's activity rhythm..."
+
+2.  "to test for...associations between demographic variables and mood
+    outcomes, and the strength of activity rhythm or routine"
+
+## Participants
+
+![Lifespan Brain Institute, Uni. of Pennsylvania & Children's Hospital
+of
+Philadelphia](https://wjm.s3.amazonaws.com/asgct/uploads/107_1589998277.jpg)
+
+```{r, echo=FALSE}
+library(dplyr)
+library(tibble)
+library(gt)
+
+tribble(
+  ~Sample, ~Values,
+  "N with various psychiatric & personality disorders", 41,
+  "% Female", 68,
+  "Hours of sensor data (Accelerometer & screen)", 1724
+
+) %>%
+  gt()
+```
+
+------------------------------------------------------------------------
+
+::: incremental
+-   Ground truth for *sleep*:
+    -   "About how many hours did you actually sleep?"
+    -   "About what time did you go to bed last night, regardless of the
+        time you actually fell asleep?"
+    -   "What time did you wake up?"
+    -   Pittburgh Sleep Quality Index
+-   Ground truth measure of *affect*:
+    -   "How happy vs. sad do you feel right now?"
+    -   Beck Depression Inventory scores
+:::
+
+------------------------------------------------------------------------
+
+## Data Processing {background-color="black" background-image="https://c.tenor.com/lL_Ream6doIAAAAd/pfsf1968-shovelling-snow.gif"}
+
+---
+
+### Data Processing
+
+Raw accelerometer data was binned into hours and averaged:
+
+```{r}
+tribble(
+  ~participant, ~Accel_X, ~Accel_Y, ~Accel_Z, ~Time,
+  "A", 3.0, 10.5, 23.4, "13:21",
+  "A", 5.0, 9.5, 25.4, "13:54",
+  "A", 5.0, 9.5, 25.4, "14:01",
+  "B", 3.7, 10.5, 23.4, "08:58",
+  "B", 9.4, 6.3, 10.4, "09:00",
+  "B", 2.4, 11.5, 3.5, "09:01",
+) %>%
+  gt()
+```
+
+------------------------------------------------------------------------
+
+### Data Processing
+
+Raw accelerometer data was binned into hours and averaged:
+
+```{r}
+tribble(
+  ~participant, ~mean_Acceleration, ~Hour_Window,
+  "A", 10.5, "14:00",
+  "A", 9.5, "15:00",
+  "B", 5.5, "09:00",
+  "B", 6.3,"10:00"
+) %>%
+  gt()
+```
+
+(Screen on-off events were similarly binned and _summed_)
+
+------------------------------------------------------------------------
+
+### Data Processing: Imputation
+
+::: incremental
+-   Accelerometer data can be missing for many reasons (power on/off,
+    signal, airplane mode, erratic participant behavior)
+
+-   Assumptions:
+
+    -   Missing accelerometer data, and it's night time when you usually
+        *don't* -\> "dormancy"
+    -   Missing accelerometer data, and it's a time that you usually
+        *do* -\> "missing data" that should be imputed
+    -   Missing accelerometer data, but you have no screen on-off events
+        -\> "dormancy"
+
+-   Used a Hidden Markov Model to impute this data
+:::
+
+------------------------------------------------------------------------
+
+### Data Processing: Imputation
+
+![WTH is a Markov
+Chain?](https://miro.medium.com/max/1032/1*jcbUF7dAhAIRS8nfUlNtow.gif)
+
+e.g. Signals controlling a gate, healthy vs. unhealthy behavior, flow of
+language.
+
+It's all about **probabilities of changing states.**
+
+------------------------------------------------------------------------
+
+### Data Processing: Imputation
+
+::: incremental
+-   "One fish, two fish, red fish, blue fish." --- Dr. Seuss
+
+-   ![Markov Model in
+    action](https://cdn-images-1.medium.com/max/800/1*MbHRwYNA8F29hzes8EPHiQ.gif)
+:::
+
+------------------------------------------------------------------------
+
+### Data Processing: Imputation
+
+-   ![Accelerometer Imputation Using Hidden Markov
+    Modeling](https://asset.jmir.pub/assets/c40663c62557277b9c29c7b4edfe05b4.png)
+
+------------------------------------------------------------------------
+
+## Modeling {background-color="black" background-image="https://c.tenor.com/6hdy7IOI4mwAAAAC/zoolander-bluesteel.gif"}
+
+------------------------------------------------------------------------
+
+### Developing the "Activity Rhythm Metric" with Markov Chains
+
+-   Used "continuous time Hidden Markov Model" to define high activity
+    vs low activity
+-   Incorporates mixed modeling to account for the effect of the hour of
+    day on the *likelihood* of rest vs. activity
+    
+![](https://miro.medium.com/max/1400/1*1r_s5QKOk2LRFjazaXghgA.gif){.absolute bottom=0 left=300 width="400" height="300"}
+
+------------------------------------------------------------------------
+
+### Developing the "Activity Rhythm Metric" (ARM) with Markov Chains
+
+![Activity Modeling Using continuous-time Hidden Markov
+Modeling](https://asset.jmir.pub/assets/72d920aa868a9e38f0702ba71585c009.png)
+
+------------------------------------------------------------------------
+
+## Takeaways?
+
+![Yeah, I was also
+confused](https://c.tenor.com/tqERWt8lBYEAAAAC/calculating-puzzled.gif)
+
+------------------------------------------------------------------------
+
+::: callout-tip
+### Mixed Models + Markov Chains Allow You to Consider Repeating Patterns
+
+> if a person tends to be active or at rest during the same hours of the
+> day routinely, then the restful hours will have very low random
+> intercepts, with active hours having high random intercepts
+
+By accounting for these mixed effects, they hope to get a better idea of
+activity *rhythms* (ARM) measured by accelerometer *and* screen events,
+moderated by the likelihood of changing activity
+:::
+
+
+------------------------------------------------------------------------
+
+::: callout-tip
+### ARM as an Outcome in Linear Regression for Sleep
+
+`ARM ~ Mean Hours of Sleep + Bedtime + Wake up time + PSQI`
+
+:chart_with_upwards_trend:ARM = "stronger routines" =
+:chart_with_downwards_trend: variance in time-to-sleep/wake +
+:chart_with_upwards_trend:sleep duration
+:::
+
+----------
+
+::: callout-tip
+### ARM as an Outcome in Association with Depression Measures
+
+`ARM ~ BDI_x`
+
+:chart_with_upwards_trend:ARM = "stronger routines" =
+:chart_with_downwards_trend: depression domains in the Beck Depression Index
+:::
+
+--------
+
+## Results! {background-color="black" background-image="https://c.tenor.com/WBGOa8jV108AAAAd/waiting-hurry.gif"}
+
+---
+
+![Wow, science](https://asset.jmir.pub/assets/ec4ee1ac24d6366f7259e524542bdd97.png)
+
+---
+
+![Hmm, maybe not science?](https://asset.jmir.pub/assets/ee6a75aeef192d80189664551463fcda.png)
+
+---
+
+![Yes, this is science](https://asset.jmir.pub/assets/abc2a1a4a53ad4170df2624a45373bc0.png)
+
+---
+
+## Conclusions
+
+::: columns
+::: {.column width="60%"}
+::: incremental
+-   "Regularity of routine" (ARM) quantified using accelerometer and screen on-off
+-   CT-HMM modeled ARM accounting for the "hour-of-the-day effect"
+-   ARM associated with sleep, mood _self-report_
+- Limited sample size --> non-significant p-values
+:::
+:::
+
+::: {.column width="40%"}
+::: incremental
+-   ARM associated with demographics, but not sleep, mood _inventories_
+
+-   Reflects that diarised methods associated with sleep quality and demographics
+- ARM _only_ accounts for activity
+:::
+:::
+:::
+
+# Thank you
+
+![Fin.](https://c.tenor.com/l7oOS4eFI3QAAAAC/lotr-done.gif)
+
+## Discussion
+
+- Diarised methods?
+  - Social Rhythm Metric ([SRM](https://pubmed.ncbi.nlm.nih.gov/2299336/))
+
+- Sample sizes?
+
+- Modeling for inference vs. prediction?
+
+![Acknowledgements!](acknowledgements.png)
