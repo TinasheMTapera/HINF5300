@@ -1,0 +1,278 @@
+---
+title: "Assignment 2: Activity Recognition"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Assignment 2: Activity Recognition}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(HINF5300)
+
+library(dplyr)
+library(readr)
+library(lubridate)
+library(here)
+library(stringr)
+library(tidyr)
+library(purrr)
+library(skimr)
+library(ggplot2)
+library(forcats)
+```
+
+In assignment 2, we're working on activity recognition. Given a large set of
+activity data from multiple participants, can we build a machine learning model
+that can detect what physical activity they are engaged in?
+
+## The Data
+
+The data comes from the [WIreless Sensor Data Mining group](https://www.cis.fordham.edu/wisdm/dataset.php)
+from Fordham University^[[Kwapisz et. al, 2011](https://doi.org/10.1145/1964897.1964918)]. We can get it from here:
+
+```{sh, eval=FALSE}
+cd ../inst/extdata && curl https://www.cis.fordham.edu/wisdm/includes/datasets/latest/WISDM_ar_latest.tar.gz -O -L
+
+tar -xzvf WISDM_ar_latest.tar.gz
+
+mv WISDM_ar_v1.1/WISDM_ar_v1.1_raw.txt activity.csv
+
+rm -rf WISDM*
+```
+
+There's quite a bit of wonky lines in this file; this little piece of code
+takes care of most of it:
+
+```{r}
+# loading it dynamically since it's not installed
+lines <- read_lines(here("inst", "extdata", "activity.csv"))
+
+# lines are ended with ";", but for some reason some lines have two entries
+# so we gather the lines with a ";" followed by any other character,
+# split them, and reduce+combine them
+lines_unsep <- lines %>%
+  str_subset(";.") %>%
+  str_split(";(?=.)") %>%
+  reduce(append)
+
+# these lines are normal... hopefully
+lines_sep <- lines %>%
+  str_subset(";.", negate=TRUE)
+
+df <- c(lines_sep, lines_unsep) %>%
+  str_remove_all(";") %>%
+  str_remove(",$") %>% 
+  tibble(x=.) %>%
+  filter(x != "") %>% # i think empty rows got created by all our string manipulation
+  separate(x, into=c('user', 'activity', 'timestamp', 'x_axis', 'y_axis','z_axis'), sep = ",") %>%
+  mutate(across(c(timestamp, contains("axis")), as.numeric)) %>%
+  mutate(user=as.factor(user), activity=as.factor(activity))
+```
+
+Let's do some EDA
+
+```{r}
+skim(df)
+```
+
+Looks like there is one row of missing data from the Z axis that we'll remove:
+
+```{r}
+df %>%
+  filter(is.na(z_axis))
+
+df <- df %>%
+  filter(!is.na(z_axis))
+```
+
+We can also look at the distributions of the accelerometer data:
+
+```{r}
+df %>%
+  select(contains("axis")) %>%
+  pivot_longer(everything()) %>%
+  ggplot(aes(x=value, fill=name)) +
+  geom_density(alpha=0.5) +
+  theme_minimal()
+```
+
+The Y axis is slightly skewed, but not awful. We can look at the classes next:
+
+```{r}
+df %>%
+  count(activity) %>%
+  mutate(activity = fct_reorder(activity, n)) %>%
+  ggplot(aes(y=n, x=activity)) +
+  geom_col() +
+  theme_minimal()
+```
+
+So walking and jogging seem to be the highest recorded factors, by quite a bit.
+Downstairs and upstairs are essentially the same — I'm considering putting them
+into the same category as "stairs". Likewise, standing and sitting just constitute
+stationary-ness. A multi-class classifier would definitely do better if the classes
+are equal, so maybe this will help:
+
+```{r}
+df %>%
+  mutate(activity = fct_collapse(
+    activity, 
+    Stationary = c("Standing", "Sitting"),
+    Stairs = c("Downstairs", "Upstairs"))) %>%
+  count(activity) %>%
+  mutate(activity = fct_reorder(activity, n)) %>%
+  ggplot(aes(y=n, x=activity)) +
+  geom_col() +
+  theme_minimal()
+```
+
+This might be easier for a model to handle; we'll save this as another variable
+and compare our results to see if it's worth it.
+
+```{r}
+df <- df %>%
+  mutate(activity_binned = fct_collapse(
+    activity, 
+    Stationary = c("Standing", "Sitting"),
+    Stairs = c("Downstairs", "Upstairs"))
+    )
+```
+
+How does the data compare across the 36 users?
+
+```{r}
+df %>%
+  group_by(user) %>%
+  summarise(n_rows = n()) %>%
+  mutate(user = fct_reorder(user, n_rows)) %>%
+  ggplot(aes(y=n_rows, x=user)) +
+  geom_col() +
+  theme_minimal()
+```
+
+So some users have twice (almost three times) more data than others. We
+might need to stratify sampling if predictions are poor.
+
+Let's check the timestamps:
+
+```{r}
+df %>%
+  group_by(user) %>%
+  arrange(timestamp) %>%
+  ggplot(aes(x=user, y=timestamp)) +
+  geom_point(position = "jitter", alpha=0.1) +
+  theme_minimal()
+```
+
+I'm not a fan of this Android timestamp thing, I must say. But there
+are some zero values for timestamp so we have to remove those:
+
+```{r}
+df <- df %>%
+  filter(timestamp!=0)
+```
+
+We'll actually make sure we don't have any duplicates too:
+
+```{r}
+df <- df %>%
+  group_by(user, activity) %>%
+  arrange(user, activity, timestamp) %>%
+  ungroup() %>%
+  distinct(across(everything()) , .keep_all=TRUE)
+```
+
+
+Next, let's standardise the timestamp by supposing that each activity
+starts at zero for each user:
+
+```{r}
+df %>%
+  mutate(timestamp = timestamp - min(timestamp)) %>%
+  ggplot(aes(x=user, y=timestamp)) +
+  geom_point(aes(color=activity), position = "jitter", alpha=0.1, size=0.01) +
+  theme_minimal()
+```
+
+Another visualisation:
+
+```{r}
+df %>%
+  ggplot(aes(x=timestamp, y=activity)) +
+  geom_point(aes(color=user),show.legend = FALSE) +
+  theme_minimal()
+```
+
+We can check the data for a handful of participants:
+
+```{r}
+df %>%
+  group_by(user) %>%
+  nest() %>%
+  ungroup() %>%
+  slice_sample(n=4) %>%
+  unnest(data) %>%
+  ggplot(aes(x=timestamp, y=activity)) +
+  geom_point(aes(color=user),show.legend = FALSE) +
+  theme_minimal()
+```
+
+One last sanity check:
+
+```{r}
+df %>%
+  group_by(user) %>%
+  nest() %>%
+  ungroup() %>%
+  slice_sample(n=4) %>%
+  unnest(data) %>%
+  #select(contains("axis")) %>%
+  pivot_longer(cols=-c(user, activity, activity_binned, timestamp)) %>%
+  ggplot(aes(x=value, fill=name)) +
+  geom_density(alpha=0.5) +
+  facet_grid(activity ~ user, scales="free") +
+  theme_minimal()
+```
+
+Let's see if we can fix the timestamp; we're told:
+
+> timestamp: generally the phone's uptime in nanoseconds (In future datasets this will
+be miliseconds since unix epoch.)
+Sampling rate: 20Hz (1 sample every 50ms)
+
+So we should convert this to make a zero reading at the beginning of each epoch,
+and then measure anything where the diff is larger than 1 minute
+
+```{r}
+tmp_df <- df %>%
+  group_by(user, activity) %>%
+  arrange(user, activity, timestamp) %>%
+  mutate(timestamp_ms = timestamp/1000000) %>% 
+  mutate(timestamp_diff = timestamp_ms - lag(timestamp_ms)) %>%
+  mutate(epoch = timestamp_diff > 1000 | is.na(timestamp_diff), index=1:n())
+
+epoch_start <- which(tmp_df$epoch == TRUE, arr.ind = TRUE)
+
+
+df <- df %>%
+  mutate(epoch = )
+```
+
+
+Let's move on before we get too bogged down in these details.
+
+## 
+
+
+
+
+
+

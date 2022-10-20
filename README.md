@@ -23,6 +23,8 @@ You can install the development version of HINF5300 from
 devtools::install_github("TinasheMTapera/HINF5300")
 ```
 
+Docker installation instructions coming soon…
+
 ## Assignment 1: Step Detection
 
 This assignment was demonstrating how to detect steps from an

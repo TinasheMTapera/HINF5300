@@ -1,0 +1,163 @@
+---
+title: "Calibration of A Commercial Wearable Device with Research-Grade Physiological Signals"
+subtitle: "HINF5300 Term Project"
+author: "Tinashe M. Tapera"
+format:
+  revealjs:
+    theme: dark
+editor: source
+bibliography: ../../../references.bib
+reference-location: margin
+citation-location: margin
+---
+
+## Introduction
+
+
+::: columns
+
+::: {.column width="50%"}
+::: incremental
+-   We all 💙 our wearables
+-   Researchers 💙 wearables for biomarkers
+-   Are our everyday wearables <p style="color:blue;">accurate enough for research?</p>
+:::
+:::
+
+::: {.column width="50%"}
+![](https://cdn.dribbble.com/users/1983603/screenshots/4140468/media/27e22ec27dd6f3726b52edd9fc56129c.gif){fig-align="right"}
+:::
+:::
+
+## A (Very Brief) Lit Review {auto-animate=true}
+
+S/O Jack for reviewing this paper [@fuller2020] in class!
+
+
+## A (Very Brief) Lit Review {auto-animate=true}
+
+::: {.fragment}
+- Many wearable options for consumers and researchers at various price points
+- Research on wearables is extensive
+
+:::: {.columns}
+::: {.column width="50%"}
+![](https://asset.jmir.pub/assets/349dc4b7c0dbd4581d74608061f3398c.png)
+:::
+::: {.column width="50%}
+![](https://asset.jmir.pub/assets/9875c4729a9c0eacf6128c2491e4839f.png)
+:::
+::::
+:::
+
+S/O Jack for reviewing this paper [@fuller2020] in class!
+
+## A (Very Brief) Lit Review {auto-animate=true}
+
+Accuracy varies across brands...
+
+![](https://asset.jmir.pub/assets/eeeb2f60048d4ee40b6de0360b7c2b21.png){width="650"}
+
+S/O Jack for reviewing this paper [@fuller2020] in class!
+
+## A (Very Brief) Lit Review {auto-animate=true}
+
+And within brands!
+
+![](https://asset.jmir.pub/assets/658ac00dc56ba731c91de712b09c8786.png){width="850"}
+
+S/O Jack for reviewing this paper [@fuller2020] in class!
+
+## A (Very Brief) Lit Review {auto-animate=true}
+
+:::{.callout-tip}
+## Question
+Can devices be calibrated to improve accuracy?
+:::
+
+## A (Very Brief) Lit Review {auto-animate=true}
+
+:::: {.columns}
+::: {.column width="50%}
+![](https://media.springernature.com/full/springer-static/image/art%3A10.1038%2Fs41598-019-45733-8/MediaObjects/41598_2019_45733_Fig4_HTML.png?as=webp)
+
+:::
+
+::: {.column width="50%"}
+
+> We have previously shown that in-home physical activity, quantified by PIR motion sensors can be used to approximate physical activity in old and oldest-old community-dwelling adults.
+
+[Wearable Based Calibration of Contactless In-home Motion Sensors for Physical Activity Monitoring in Community-Dwelling Older Adults [@schütz2021]]{style="font-size:40%"}
+
+:::
+::::
+
+## A (Very Brief) Lit Review {auto-animate=true}
+
+:::: {.columns}
+::: {.column width="50%}
+![](https://media.springernature.com/full/springer-static/image/art%3A10.1038%2Fs41598-019-45733-8/MediaObjects/41598_2019_45733_Fig4_HTML.png?as=webp)
+
+:::
+
+::: {.column width="50%"}
+
+> We aim to...[improve on the previous study]...by using the much more accurate and well-validated accelerometer based physical activity, to initially calibrate the ambient sensor systems.
+
+
+[Wearable Based Calibration of Contactless In-home Motion Sensors for Physical Activity Monitoring in Community-Dwelling Older Adults [@schütz2021]]{style="font-size:40%"}
+
+
+:::
+::::
+
+## A (Very Brief) Lit Review {auto-animate=true}
+
+::::: incremental
+:::: {.columns}
+::: {.column width="50%"}
+![](https://media.springernature.com/full/springer-static/image/art%3A10.1038%2Fs41598-019-45733-8/MediaObjects/41598_2019_45733_Fig4_HTML.png?as=webp)
+:::
+::: {.column width="50%}
+Calibrating the IR signal
+![](https://www.frontiersin.org/files/Articles/566595/fdgth-02-566595-HTML-r1/image_m/fdgth-02-566595-g001.jpg)
+
+[Wearable Based Calibration of Contactless In-home Motion Sensors for Physical Activity Monitoring in Community-Dwelling Older Adults [@schütz2021]]{style="font-size:40%"}
+
+:::
+::::
+:::::
+
+## {background-color="black"}
+
+![](https://media.tenor.com/ULPwyZHjXicAAAAC/scourge-thor-ragnarok.gif){top=0 left=300 fig-align="center"}
+
+:::{.callout-note}
+## The Proposal
+
+**This course project aims to develop a calibration algorithm to improve the accuracy of heart rate data collected by a Garmin wearable using clinical research-grade heart rate data in a driving simulator study.**
+:::
+
+## The Data (Courtesy of UbiWell Lab)
+
+![](bosch_iot.png)
+
+
+## The Data (Courtesy of UbiWell Lab)
+
+![](study_design.png)
+
+## The Analysis Plan
+
+::: incremental
+- Are the data really different?
+- Use high frequency ECG to impute Garmin data
+- Develop a model with ECG and predict new Garmin data
+- Use some math I don't yet understand:
+  - Transfer learning
+  - Gaussian Process Regression from the paper
+:::
+
+## Thank you!
+
+## References
