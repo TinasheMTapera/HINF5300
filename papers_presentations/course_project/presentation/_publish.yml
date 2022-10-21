@@ -1,0 +1,4 @@
+- source: Project_proposal_pres.qmd
+  quarto-pub:
+    - id: cb5ab9d5-3c80-4b00-9110-3b6a16de78e5
+      url: 'https://quartopub.com/sites/tinashemtapera/hinf_project_proposal'
