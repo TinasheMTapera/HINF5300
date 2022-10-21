@@ -259,11 +259,14 @@ tmp_df <- df %>%
   mutate(timestamp_diff = timestamp_ms - lag(timestamp_ms)) %>%
   mutate(epoch = timestamp_diff > 1000 | is.na(timestamp_diff), index=1:n())
 
-epoch_start <- which(tmp_df$epoch == TRUE, arr.ind = TRUE)
+epoch_start <- which(tmp_df$epoch == TRUE, arr.ind = TRUE) %>%
+  data.frame(index=., epoch_index=1:length(.))
 
 
-df <- df %>%
-  mutate(epoch = )
+df_ <- tmp_df %>%
+  left_join(epoch_start) %>%
+  fill(epoch_index, .direction = "down") %>%
+  select(user:timestamp_ms, epoch=epoch_index)
 ```
 
 
