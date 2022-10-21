@@ -65,16 +65,19 @@ lines_unsep <- lines %>%
 
 # these lines are normal... hopefully
 lines_sep <- lines %>%
-  str_subset(";.", negate=TRUE)
+  str_subset(";.", negate = TRUE)
 
 df <- c(lines_sep, lines_unsep) %>%
   str_remove_all(";") %>%
-  str_remove(",$") %>% 
-  tibble(x=.) %>%
-  filter(x != "") %>% # i think empty rows got created by all our string manipulation
-  separate(x, into=c('user', 'activity', 'timestamp', 'x_axis', 'y_axis','z_axis'), sep = ",") %>%
+  str_remove(",$") %>%
+  tibble(x = .) %>%
+  filter(x != "") %>% # i think empty rows got created by all our string manipulation # nolint
+  separate(x,
+  into = c(
+    'user', 'activity', 'timestamp',
+    'x_axis', 'y_axis','z_axis'), sep = ",") %>%
   mutate(across(c(timestamp, contains("axis")), as.numeric)) %>%
-  mutate(user=as.factor(user), activity=as.factor(activity))
+  mutate(user = as.factor(user), activity = as.factor(activity))
 ```
 
 Let's do some EDA
@@ -92,6 +95,9 @@ df %>%
 df <- df %>%
   filter(!is.na(z_axis))
 ```
+
+And a few rows where timestamp is 0:
+
 
 We can also look at the distributions of the accelerometer data:
 
