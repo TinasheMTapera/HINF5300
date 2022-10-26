@@ -27,6 +27,9 @@ library(purrr)
 library(skimr)
 library(ggplot2)
 library(forcats)
+library(tidymodels)
+library(slider)
+library(furrr)
 ```
 
 In assignment 2, we're working on activity recognition. Given a large set of
@@ -98,6 +101,12 @@ df <- df %>%
 
 And a few rows where timestamp is 0:
 
+```{r}
+df <- df %>%
+  filter(timestamp != 0)
+```
+
+
 
 We can also look at the distributions of the accelerometer data:
 
@@ -110,7 +119,19 @@ df %>%
   theme_minimal()
 ```
 
-The Y axis is slightly skewed, but not awful. We can look at the classes next:
+The Y axis is slightly skewed, but not awful. I'm assuming that's an axis that gets a lot of activity like in someone's pocket:
+
+```{r}
+df %>%
+  select(activity, y_axis) %>%
+  ggplot(aes(x=y_axis, fill=activity)) +
+  geom_density(alpha = 0.5) +
+  theme_minimal()
+```
+
+Jogging; makes sense!
+
+We can look at the classes next:
 
 ```{r}
 df %>%
@@ -178,15 +199,11 @@ df %>%
   theme_minimal()
 ```
 
-I'm not a fan of this Android timestamp thing, I must say. But there
-are some zero values for timestamp so we have to remove those:
+I'm not a fan of this Android timestamp thing, I must say. 
 
-```{r}
-df <- df %>%
-  filter(timestamp!=0)
-```
-
-We'll actually make sure we don't have any duplicates too:
+Let's make sure the rows are unique. This step additionally groups
+the data by user and activity and arranges the data
+by timestamp.
 
 ```{r}
 df <- df %>%
@@ -196,35 +213,14 @@ df <- df %>%
   distinct(across(everything()) , .keep_all=TRUE)
 ```
 
-
-Next, let's standardise the timestamp by supposing that each activity
-starts at zero for each user:
-
-```{r}
-df %>%
-  mutate(timestamp = timestamp - min(timestamp)) %>%
-  ggplot(aes(x=user, y=timestamp)) +
-  geom_point(aes(color=activity), position = "jitter", alpha=0.1, size=0.01) +
-  theme_minimal()
-```
-
-Another visualisation:
-
-```{r}
-df %>%
-  ggplot(aes(x=timestamp, y=activity)) +
-  geom_point(aes(color=user),show.legend = FALSE) +
-  theme_minimal()
-```
-
-We can check the data for a handful of participants:
+Another way to visualize data for a handful of participants:
 
 ```{r}
 df %>%
   group_by(user) %>%
   nest() %>%
   ungroup() %>%
-  slice_sample(n=4) %>%
+  slice_sample(n=3) %>%
   unnest(data) %>%
   ggplot(aes(x=timestamp, y=activity)) +
   geom_point(aes(color=user),show.legend = FALSE) +
@@ -238,7 +234,7 @@ df %>%
   group_by(user) %>%
   nest() %>%
   ungroup() %>%
-  slice_sample(n=4) %>%
+  slice_sample(n=3) %>%
   unnest(data) %>%
   #select(contains("axis")) %>%
   pivot_longer(cols=-c(user, activity, activity_binned, timestamp)) %>%
@@ -269,18 +265,147 @@ epoch_start <- which(tmp_df$epoch == TRUE, arr.ind = TRUE) %>%
   data.frame(index=., epoch_index=1:length(.))
 
 
-df_ <- tmp_df %>%
+df_clean <- tmp_df %>%
   left_join(epoch_start) %>%
   fill(epoch_index, .direction = "down") %>%
   select(user:timestamp_ms, epoch=epoch_index)
 ```
 
-
 Let's move on before we get too bogged down in these details.
 
-## 
+We're going to try out building the model pipeline with
+Tidymodels, so we're going to need to build a preprocessing
+recipe.
 
+## Data Filtering
 
+The first step is to filter the accelerometer data. We're going to filter the full time series' magnitude as in the previous assignment:
+
+```{r}
+df_clean <- df_clean %>%
+  mutate(mag = sqrt((x_axis^2 + y_axis^2 + z_axis^2))) %>%
+    mutate(clean_signal = mag) %>%
+           #filter_signal()) %>%
+           #smooth_signal()) %>%
+  filter(!is.na(clean_signal)) %>%
+  mutate(timestamp_dt = as.POSIXct(timestamp_ms/1000, origin = "1960-01-01")) %>%
+  select(user, activity, activity_binned, epoch, timestamp_dt, x_axis:z_axis, mag, clean_signal)
+  
+```
+
+## Data Segmentation
+
+Next, we'll break the data down into segments that'll be used to
+generate features. We're using non-overlapping, 10-second segments:
+
+```{r}
+get_segments <- function(segment, column){
+  slide_period(
+    segment,
+    .i=segment$timestamp_dt,
+    .period="second",
+    .f = ~ .x %>% select({{ column }}),
+    .every=10,
+    complete=FALSE
+  )
+}
+
+df_segmented <- df_clean %>%
+  group_by(epoch, .add=TRUE) %>%
+  nest() %>%
+  ungroup() %>%
+  mutate(
+    segments_x = map(data, .f = get_segments, x_axis),
+    segments_y = map(data, .f = get_segments, y_axis),
+    segments_z = map(data, .f = get_segments, z_axis),
+    segments_mag = map(data, .f = get_segments, mag)
+  ) %>%
+  select(-data) %>%
+  unnest(c(segments_x, segments_y, segments_z, segments_mag))
+```
+
+We now have `r nrow(df_segmented)` segments,
+which will translate to a machine learning problem with that
+many rows for training and testing. We'll use each of these
+segments and create a set of features with Varun's Python code.
+
+```{r}
+get_features <- function(
+  vec,
+  type,
+  script = here("inst", "py", "extract_features.py"),
+  feature_names = c(
+    "mean", "standard_deviation", "avg_abs_difference",
+    "min", "max", "max_min_differrence",
+    "median", "med_abs_deviation",
+    "iqr", "negative_cnt", 'positive_cnt',
+    "vals_above_mean", "n_peaks",
+    "skewness", "kurtosis", "energy", "signal_area"
+    ),
+    print_debug=FALSE
+  ) {
+
+  ## step 1: write the vector of signals to a temporary file
+
+  this_tempfile <- tempfile()
+
+  vec %>% write_delim(this_tempfile, col_names = FALSE)
+
+  ## step 2: call the python script and have it write to file
+
+  cmd <- paste0(c("source /opt/homebrew/Caskroom/miniconda/base/etc/profile.d/conda.sh &&", 
+  "conda activate hinf5300 && python", 
+  script, this_tempfile, type), sep=" ", collapse=" ")
+
+  if(print_debug) print(paste("running:", cmd))
+
+  out <- system(cmd, intern = TRUE, ignore.stdout = TRUE, ignore.stderr = TRUE)
+
+  ## step 3: read in the file that was written by python
+  if(type == "frequency"){
+    feature_names <- c("dc_component", feature_names)
+  }
+
+  features <- read_lines(this_tempfile) %>%
+    as.numeric() %>%
+    data.frame() %>%
+    t()
+
+  colnames(features) <- feature_names
+
+  ## step 4: gc
+  unlink(this_tempfile)
+
+  ## return
+  return(as_tibble(features))
+
+}
+```
+
+This chunk take a short while to run, plut it calls Python in the
+background, so I've let it precompute and saved the outputs.
+
+```{r}
+library(tictoc)
+
+tic()
+plan(multisession, workers = 8)
+
+df_features <- df_segmented %>%
+  slice_sample(n=50) %>%
+  mutate(
+    time_x = future_map(segments_x, function(x) get_features(x, type = "time")),
+    freq_x = future_map(segments_x, function(x) get_features(x, type = "frequency")),
+    time_y = future_map(segments_y, function(x) get_features(x, type = "time")),
+    freq_y = future_map(segments_y, function(x) get_features(x, type = "frequency")),
+    time_z = future_map(segments_z, function(x) get_features(x, type = "time")),
+    freq_z = future_map(segments_z, function(x) get_features(x, type = "frequency")),
+    time_mag = future_map(segments_mag, function(x) get_features(x, type = "time")),
+    freq_mag = future_map(segments_mag, function(x) get_features(x, type = "frequency"))) %>%
+  unnest(matches("time_|freq_"), names_sep = ".") %>%
+  select(-contains("segments"))
+toc()
+```
 
 
 
