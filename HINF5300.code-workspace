@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
 	"folders": [
 		{
 			"path": "."
@@ -9,4 +10,11 @@
 		"r.rpath.mac": "/usr/local/bin/R",
 		"r.rterm.option": []
 	}
+=======
+    "folders": [
+        {
+            "path": "."
+        }
+    ]
+>>>>>>> main
 }
