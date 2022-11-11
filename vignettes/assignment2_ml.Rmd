@@ -22,7 +22,7 @@ Machine learning!
 
 ```{r setup}
 library(HINF5300)
-library(tidyverse)
+#library(tidyverse)
 library(here)
 library(skimr)
 library(slider)
