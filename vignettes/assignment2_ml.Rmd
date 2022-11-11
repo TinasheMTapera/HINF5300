@@ -129,7 +129,7 @@ models_tuned_loso <- models %>%
 
 We can still get the accuracy of the ones that succeeded, though:
 
-```{r}
+```{r, error=TRUE}
 models_tuned_tenfold %>%
   slice(1,2) %>%
   autoplot() +
