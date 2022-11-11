@@ -24,6 +24,7 @@ VignetteBuilder: knitr
 RoxygenNote: 7.2.1
 Imports: 
     assertthat,
+    forcats,
     magrittr,
     pracma,
     quantmod,
@@ -31,8 +32,10 @@ Imports:
     rlang,
     signal,
     skimr,
+    slider,
     tidyr,
     zoo
 URL: https://tinashemtapera.github.io/HINF5300/
 Depends: 
-    R (>= 2.10)
+    R (>= 2.10),
+    tidymodels
