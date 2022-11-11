@@ -1,0 +1,191 @@
+---
+title: "Activity Recognition Part 2: Machine Learning"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Activity Recognition Part 2: Machine Learning}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+knitr::opts_chunk$set(fig.width=12, fig.height=8) 
+```
+
+In part 1, we went through the process of EDA, preprocessing, and
+feature extraction of the [WIreless Sensor Data Mining group](https://www.cis.fordham.edu/wisdm/dataset.php)
+activity recognition dataset. Next, we're gonna get to the fun part:
+Machine learning!
+
+```{r setup}
+library(HINF5300)
+library(tidyverse)
+library(here)
+library(skimr)
+library(slider)
+library(tidymodels)
+```
+
+## Training ML Classifiers
+
+Now comes the fun part! We are training a a few classifiers here to predict the
+activity. We're doing it with `tidymodels` which makes it super easy:
+
+```{r}
+#data(df_features)
+load(here("data", "df_features.rda"))
+df_features <- select(df_features, -epoch) #%>% slice_sample(n=250)
+set.seed(501)
+
+tuning_grid <- 10
+```
+
+First, we split the training and final testing data to avoid any data leakage:
+
+```{r}
+df_split <- group_initial_split(df_features, prop = 0.8, group=user)
+train <- training(df_split)
+test <- testing(df_split)
+```
+
+We have two cross validation methods to test: 10 fold, and leave-one-subject-out;
+so here we go:
+
+```{r}
+tenfold_cv_data <- vfold_cv(train, v = 10)
+loso_cv_data <- group_vfold_cv(train, group=user)
+```
+
+Note that here we're splitting the initial data into a train (29 subjects) and
+test set (7 subjects). We're training and evaluating repeatedly on the training
+subjects, and the final evaluation is on the test set. We're not cross validating
+on the test set, because I believe that's [data leakage](https://www.tmwr.org/splitting.html#other-considerations-for-a-data-budget)?
+
+We're using `workflowsets` to generate our lists of models and preprocessing recipes.
+Our selected models are random forest and a multilayer perceptron:
+
+```{r}
+# generate the preprocessing recipe
+base_recipe <- recipe(
+  activity ~ ., data = train
+  ) %>%
+  update_role(user, new_role = "dataset split variable")
+
+# just the XYZ axes
+xyz_recipe <-  base_recipe %>%
+  step_select(-matches("_mag_"), user) %>%
+  step_zv(all_predictors(), role="predictor") %>%
+  step_normalize(all_predictors(), role="predictor")
+
+# just the magnitude
+mag_recipe <- base_recipe %>% 
+  step_select(contains("mag")) %>%
+  step_zv(all_predictors(), role="predictor") %>%
+  step_normalize(all_predictors(), role="predictor")
+
+# create the specifications for machine learning models
+rf_spec <- rand_forest(trees = 1000) %>%
+  set_mode("classification") %>%
+  set_engine("ranger")
+
+mlp_cls_spec <- 
+  mlp(penalty = 0, epochs = 100) %>%
+  set_mode("classification") %>%
+  set_engine("nnet")
+
+# put the recipes and models in a workflowset
+models <- workflow_set(
+  preproc = list(axes = xyz_recipe, mag = mag_recipe),
+  models = list(
+    random_forest = rf_spec,
+    perceptron = mlp_cls_spec),
+  cross = TRUE
+   )
+```
+
+Fitting the models:
+
+```{r, error=TRUE}
+models_tuned_tenfold <- models %>%
+  workflow_map(
+    "tune_grid", resamples = tenfold_cv_data, grid = tuning_grid,
+    metrics = metric_set(accuracy, roc_auc, precision, recall, f_meas), verbose = TRUE
+  )
+```
+
+From this, we can see that some models didn't fit because there was not enough
+data in the other activities (remember the plot about how much data there is per activity).
+
+```{r, error=TRUE}
+models_tuned_loso <- models %>%
+  workflow_map(
+    "tune_grid", resamples = loso_cv_data, grid = tuning_grid,
+    metrics = metric_set(accuracy, roc_auc, precision, recall, f_meas), verbose = FALSE
+  )
+```
+
+We can still get the accuracy of the ones that succeeded, though:
+
+```{r}
+models_tuned_tenfold %>%
+  slice(1,2) %>%
+  autoplot() +
+  labs(title="10-Fold CV Accuracy") +
+  theme_minimal()
+```
+
+So the best model with tenfold CV was the random forest. We can check the other CV method too:
+
+```{r}
+models_tuned_loso %>%
+  slice(1, 2) %>%
+  autoplot() +
+  labs(title="LOSO CV Accuracy") +
+  theme_minimal()
+```
+
+So overall, 10 fold cross validation Random Forest with the three axes features had higher accuracy, recall, and AUC_ROC. I
+think we'll move forward with that then! 
+
+## Predicting on the Test Set
+
+Time to predict on the test set:
+
+```{r}
+best_metric <- models_tuned_tenfold %>%
+  extract_workflow_set_result("axes_random_forest") %>%
+  select_best(metric="roc_auc")
+
+best_wflow <- models_tuned_tenfold %>%
+  extract_workflow("axes_random_forest") %>%
+  finalize_workflow(best_metric)
+
+final_results <- best_wflow %>% 
+  last_fit(split=df_split, metrics=metric_set(accuracy, roc_auc, precision, recall, f_meas))
+```
+
+Here's our performance on the test set:
+
+```{r}
+final_results %>% collect_metrics()
+```
+
+Here's a confusion matrix too:
+
+```{r}
+final_results %>% 
+  pull(.predictions) %>%
+  pluck(1) %>%
+  select(predicted = .pred_class) %>%
+  bind_cols(actual=test$activity) %>%
+  conf_mat(truth=actual, estimate=predicted) %>%
+  autoplot(type = "heatmap")
+```
+
+It looks like sometimes our algorithm has a hard time with distinguishing between
+going up/down stairs and walking; which makes sense, climbing stairs is walking!
+
+

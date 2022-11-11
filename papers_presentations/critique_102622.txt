@@ -1,0 +1,24 @@
+# mPulse Mobile Sensing Model for Passive Detection of Impulsive Behavior: Exploratory Prediction Study
+
+In this paper, the authors set up a pretty standard EMA + passive sensing study.
+It seemed to follow all of the regular procedures, but what was interesting
+to me was the integration of the behavioral/cognitive tests: I had never
+imagined that you could put a Go-no-go or a delay discounting task in a
+mobile study like this, but the idea is absolutely brilliant. I've contributed
+to a few papers that use these frameworks and have always imagined them to be
+a little trivial — a lot of work to come into the lab to complete them. Doing
+a mobile version to me seems intuitive and well thought out!
+
+This seems like it would be a perfect set up for easy diagnosis of ADHD in 
+people who carry mobile phones. This is especially effective since they were 
+collecting "screen checking" events.
+
+I am also familiar with the AWARE framework so it was good to see others using
+that as well. AWARE has the ability to log app usage, I'm sure, so I am surprised they didn't
+track specific apps that may be categorised to fit more impulsive people than
+others.
+
+It's possible that their results were less than impressive in predicting
+self-reported impulsivity because impulsive, by its very nature, is pretty
+spontaneous and instantaneous — there may be some temporal lag and a lack
+of self-awareness when reporting impulsivity.

@@ -1,0 +1,29 @@
+# Studying the Effect of Long COVID-19 Infection on Sleep Quality Using Wearable Health Devices: Observational Study
+
+The study design for this paper was simple and effective; I did enjoy the thorough
+description of the experimental design considering the difficulties of working
+with COVID data. What was surprising was that for the data analysis, the correlations
+between sleep phases and biometrics, while significant, were all incredibly small. Additionally,
+I have heard that it is generally inadvisable to dichotomize continuous data
+(dividing cohort into High HR and Low HR); I'm not sure why they wanted to do this.
+That being said, the finding that COVID patients had reduced deep sleep is sensible
+(and in my own experience, probably true!) It would make the most sense that
+while ill, people tend to sleep more, but have more disturbances from coughing or
+having trouble breathing, or other symptoms, that would prevent them from achieving as
+much _deep_ sleep as normal.
+
+# Identifying Behavioral Phenotypes of Loneliness and Social Isolation with Passive Sensing: Statistical Analysis, Data Mining and Machine Learning of Smartphone and Fitbit Data
+
+Generally, the idea of intervening on loneliness seems a little far-fetched to me.
+Loneliness isn't something the individual is always totally in control of. Of
+course, cognitive reframing of _why_ they are lonely and what they _can_ do about
+it are ultimately important, but part of cognitive therapy is often about accepting
+the limitations of ones locus of control. Detecting loneliness might be well
+and dandy, but if the cause of loneliness is outside of the individual's locus
+of control, then what is the ultimate recourse?
+
+Otherwise, this I additionally don't know why they dichotomized a continuous measure; if you have that data
+why would you want less of it? Nevertheless, the methods were impressive and comprehensive
+and it was good to see a different feature extraction approach being used with
+ensemble modeling. They didn't report if just throwing all the features at it worked
+better, so I'm assuming this method was best.

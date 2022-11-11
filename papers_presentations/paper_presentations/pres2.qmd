@@ -1,0 +1,61 @@
+---
+subtitle: "An unsupervised machine learning approach using passive movement data  to understand depression and schizophrenia"
+author: "Tinashe M. Tapera"
+title: "HINF5300 Paper Presentation 2"
+format: 
+  revealjs:
+    #incremental: true
+    theme: serif
+    chalkboard: true
+    slide-number: true
+title-slide-attributes:
+    data-background-image: https://ars.els-cdn.com/content/image/1-s2.0-S0165032722008631-gr2.jpg
+    data-background-size: contain
+    data-background-opacity: "0.3"
+from: markdown+emoji
+preview-links: true
+editor: 
+  markdown: 
+    wrap: 72
+---
+
+## Background
+
+Studying mental health can involve th
+
+::: columns
+::: {.column width="50%"}
+::: incremental
+-   mHealth is great!
+    -   Ease of use
+    -   Ease of implementation
+    -   Loads of data
+:::
+
+:::
+
+::: {.column width="50%"}
+::: incremental
+- So many sensors, and so much longitudinal data
+- Validity: _How do we know we're using the best models?_
+:::
+:::
+
+
+:::
+
+
+## Bullets
+
+When you click the **Render** button a document will be generated that includes:
+
+-   Content authored with markdown
+-   Output from executable code
+
+## Code
+
+When you click the **Render** button a presentation will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+1 + 1
+```

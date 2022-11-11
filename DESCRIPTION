@@ -33,3 +33,5 @@ Imports:
     tidyr,
     zoo
 URL: https://tinashemtapera.github.io/HINF5300/
+Depends: 
+    R (>= 2.10)

@@ -4,7 +4,7 @@
 \alias{runExample}
 \title{Run an example algorithm from the class}
 \usage{
-runExample(example)
+runExample(example, output_directory)
 }
 \arguments{
 \item{example}{Which example to run}
