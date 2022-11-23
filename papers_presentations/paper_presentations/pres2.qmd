@@ -19,43 +19,405 @@ editor:
     wrap: 72
 ---
 
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+library(tidymodels)
+library(gt)
+theme_set(theme_minimal())
+set.seed(27)
+```
+
 ## Background
 
-Studying mental health can involve th
+Diagnosing Major Depressive Disorder vs. Schizophrenia
 
 ::: columns
 ::: {.column width="50%"}
 ::: incremental
--   mHealth is great!
-    -   Ease of use
-    -   Ease of implementation
-    -   Loads of data
+-   MDD is charactertised by:
+    -   :arrow_down: mood
+    -   :arrow_down: interest
+    -   :arrow_down: cognition
+    -   Vegetative state
+-   Negative symptoms
 :::
-
 :::
 
 ::: {.column width="50%"}
 ::: incremental
-- So many sensors, and so much longitudinal data
-- Validity: _How do we know we're using the best models?_
+-   Schiz. is characterised by:
+    -   :arrow_up: halluciation
+    -   :arrow_up: delusions
+    -   :arrow_down: motivation
+    -   :arrow_down: interest
+    -   :arrow_down: pleasure
+-   Positive & negative symptoms
 :::
 :::
-
-
 :::
 
+------------------------------------------------------------------------
 
-## Bullets
+-   Diagnosis & treatment is a challenge:
+    -   Overlapping *populations* (60% of SCHZ have MDD)
+    -   Similar *presentation* of symptoms (negative symptoms)
+    -   Heterogeneity *within* populations ()
 
-When you click the **Render** button a document will be generated that includes:
+![Heterogeneity visualized](./heterogeneity.png)
 
--   Content authored with markdown
--   Output from executable code
+Where do we go from here?
 
-## Code
+## Biomarkers of Mental Health
 
-When you click the **Render** button a presentation will be generated that includes both content and the output of embedded code. You can embed code like this:
+::: incremental
+-   Mobility:
+    -   Psychomotor slowing
+    -   Posture, instability, gait, balance
+    -   General activity levels
+-   Sleep:
+    -   High \# of disturbances precede development of psychiatric
+        disorder
+    -   Sleep quality, duration, efficiency
+    -   Sleep as treatment
+:::
+
+##  {background-color="black" background-image="https://c.tenor.com/GgY0x6K3VhkAAAAC/you-know-where-im-going-with-this-mr-beast.gif"}
+
+## An unsupervised machine learning approach using passive movement data to understand depression and schizophrenia
+
+::: incremental
+-   We're gonna talk about **actigraphy**!
+-   But what is *unsupervised* learning?
+:::
+
+## Unsupervised Learning
+
+-   Categorization/clustering of *unlabeled* data:
+
+```{r, include=FALSE}
+centers <- tibble(
+  cluster = factor(1:3), 
+  num_points = c(100, 150, 50),  # number points in each cluster
+  x1 = c(5, 0, -3),              # x1 coordinate of cluster center
+  x2 = c(-1, 1, -2)              # x2 coordinate of cluster center
+)
+
+labelled_points <- 
+  centers %>%
+  mutate(
+    x1 = map2(num_points, x1, rnorm),
+    x2 = map2(num_points, x2, rnorm)
+  ) %>% 
+  select(-num_points) %>% 
+  unnest(cols = c(x1, x2))
+```
+
+```{r, echo=FALSE}
+ggplot(labelled_points, aes(x1, x2)) +
+  geom_point(alpha = 0.3, show.legend=FALSE) +
+  labs(title="Are there any groups here...?")
+```
+
+## Unsupervised Learning
+
+-   Categorization/clustering of *unlabeled* data:
+
+```{r, echo=FALSE}
+ggplot(labelled_points, aes(x1, x2, colour=cluster)) +
+  geom_point(alpha = 0.3,show.legend = FALSE) +
+  labs(title="Sure!")
+```
+
+## Unsupervised Learning
+
+-   But I could also create clusters this way:
+
+```{r, echo=FALSE}
+labelled_points %>%
+  mutate(cluster = ifelse(cluster == 2, 3, cluster)) %>%
+  ggplot(aes(x1, x2, colour=cluster)) +
+    geom_point(alpha = 0.3,show.legend = FALSE) +
+    labs(title="How do we know this clustering is better/worse?")
+```
+
+------------------------------------------------------------------------
+
+This can go on for as many data points as we have:
 
 ```{r}
-1 + 1
+points <- 
+  labelled_points %>% 
+  select(-cluster)
+kclust <- kmeans(points, centers = 3)
+kclusts <- 
+  tibble(k = 1:9) %>%
+  mutate(
+    kclust = map(k, ~kmeans(points, .x)),
+    tidied = map(kclust, tidy),
+    glanced = map(kclust, glance),
+    augmented = map(kclust, augment, points)
+  )
+
+clusters <- 
+  kclusts %>%
+  unnest(cols = c(tidied))
+
+assignments <- 
+  kclusts %>% 
+  unnest(cols = c(augmented))
+
+clusterings <- 
+  kclusts %>%
+  unnest(cols = c(glanced))
+
+p1 <- 
+  ggplot(assignments, aes(x = x1, y = x2)) +
+  geom_point(aes(color = .cluster), alpha = 0.8) + 
+  facet_wrap(~ k)
+p1
 ```
+
+## Why is this useful? {background-color="black" background-image="https://media1.giphy.com/media/s239QJIh56sRW/giphy.gif"}
+
+------------------------------------------------------------------------
+
+::: incremental
+-   You can use unsupervised learning to mathematically restructure
+    datasets, e.g. turn *wide* data with too many columns into more
+    manageable data:
+
+-   ![megaputer.com](https://www.megaputer.com/wp-content/uploads/ezgif-com-crop.gif)
+:::
+
+------------------------------------------------------------------------
+
+-   This is known in ML as *dimensionality reduction*
+-   (We're going to hand-wave the math today :grin:)
+
+![It can get
+gnarly](https://www.researchgate.net/publication/332536913/figure/fig4/AS:754940838424579@1557003330123/A-summary-of-the-main-strategies-underlying-dimensionality-reduction-techniques-a.png)
+
+------------------------------------------------------------------------
+
+Recall the plot?
+
+```{r}
+p1 +
+  labs(caption = "Instead of looking at many variables at once, you can cluster across\nmany variables to find common features")
+```
+
+------------------------------------------------------------------------
+
+Review paper aims:
+
+::: incremental
+::: callout-tip
+### Aims
+
+> 1.  Do distinct actigraphic phenotypes map on to existing diagnostic
+>     constucts?\n
+> 2.  Can we characterize the distinct movement phenotypes associated
+>     with MDD, schizophrenia, and non-disordered controls?
+:::
+:::
+
+---------
+
+## Methods
+
+### The Sample
+
+```{r, echo=FALSE}
+tribble(
+  ~Group,             ~N, ~`Mean Age`, ~`% Male`,
+  "Schizophrenia",    22, 46.2,        86,
+  "Depression",       23, 42.8,        57,
+  "Healthy Controls", 32, 38.2,        38
+) %>%
+  gt::gt()
+```
+
+- Publicly available dataset
+- 5/23 depressed were in-patient, all SCHZ were in-patient, controls were
+hospital employees, students, and outpatients without significant psychiatric illness
+
+## Methods
+
+### The Data Collection
+
+- Two weeks of continuous activity count data (1 minute epochs)
+- What is a "count?"
+
+> Counts are a result of summing post-filtered accelerometer values (raw data at 30Hz) into epoch "chunks."  The value of the counts will vary based on the frequency and intensity of the raw acceleration.  The filtering process by which counts are produced is proprietary to ActiGraph.
+
+![](https://media.springernature.com/full/springer-static/image/art%3A10.1007%2Fs40744-019-00176-5/MediaObjects/40744_2019_176_Fig2_HTML.jpg?as=webp)
+
+## Methods
+
+### The Data Processing
+
+1. Collect Actigraphy into a high dimensional data structure
+
+![](actigraphy.png)
+
+## Methods
+
+### Uniform manifold approximation and projection (UMAP)
+
+- A powerful dimensionality reduction technique
+- Non-linear, good with outliers & groups
+
+----
+
+![UMAP Demonstrated, check out pair-code.github.io/understanding-umap/](umap.png)
+
+## Methods
+
+### Uniform manifold approximation and projection (UMAP)
+
+2. Reduce the dimensions to two coordinates for each participant
+
+![](acti-umap.png)
+
+## Methods
+
+### UMAP Normalization
+
+3. Normalize the UMAP coordinates for SHapley Additive exPlanation (SHAP, a perturbation technique)
+
+![](https://ars.els-cdn.com/content/image/1-s2.0-S0165032722008631-gr1_lrg.jpg)
+
+## Results {auto-animate=true}
+
+
+::: columns
+::: {.column width="50%"}
+::: incremental
+-   ![](https://ars.els-cdn.com/content/image/1-s2.0-S0165032722008631-gr2.jpg)
+:::
+:::
+
+::: {.column width="50%"}
+::: incremental
+-   Subjects whose points are closer have more similar activity
+-   Schizophrenia and controls tend to cluster together, centrally in the two-dimensional space
+-   Depressed participants around the periphery
+:::
+:::
+:::
+
+## Results {auto-animate=true}
+
+::: columns
+::: {.column width="50%"}
+::: incremental
+-   ![](https://ars.els-cdn.com/content/image/1-s2.0-S0165032722008631-gr2.jpg)
+:::
+:::
+
+::: {.column width="50%"}
+::: incremental
+-   Can we test this statistically?
+  - Yes, with **Euclidean Distances**!
+
+:::
+:::
+:::
+
+## Results
+
+```{r, include=FALSE}
+tribble(
+  ~`Group A`,     ~`Group B`,    ~`Group A Mean Euclidean Distance`, ~`Group B Mean Euclidean Distance`, ~`Games-Howell (p-value)`,
+  "Control", "Depressive", 1.41, 2.03, 0.001,
+  "Control", "Schizophrenic", 1.41, 1.56, 0.047,
+  "Depressive", "Schizophrenic", 1.56, 2.03, 0.001,
+) %>%
+  gt() %>%
+  tab_style(
+    style = list(
+      cell_text(weight = "bold")
+      ),
+    locations = cells_body(
+      columns = `Games-Howell (p-value)`
+    )
+  ) -> t1
+```
+
+```{r}
+t1
+```
+
+## Results
+
+- Recall the data structure:
+
+![](https://ars.els-cdn.com/content/image/1-s2.0-S0165032722008631-gr1_lrg.jpg)
+
+- SHAP: If we remove one 1-minute feature, how does that affect the eventual
+restructured dataset? 
+
+## Results
+
+![](https://ars.els-cdn.com/content/image/1-s2.0-S0165032722008631-gr4_lrg.jpg)
+
+::: {.notes}
+Controls:
+  - consistent diurnal pattern
+  - high structure
+  - shap doesn't suggest patterns are unstable
+
+Schiz:
+  - lower actigraphy overall
+  - shap suggests early morning (midnight - 6am) is influential to the structure
+
+Depr:
+  - erratic movement
+  - little regularity
+  - inconsistent wake up times
+:::
+
+## Conclusions & Discussion
+
+::: callout-tip
+### Aims
+
+> 1.  Do distinct actigraphic phenotypes map on to existing diagnostic
+>     constucts?\n
+> 2.  Can we characterize the distinct movement phenotypes associated
+>     with MDD, schizophrenia, and non-disordered controls?
+:::
+
+-------------
+
+- Controls = stable activity; non-controls = unstable activity
+- Depressed: irregular schedules, erratic sleep, shifted sleep-wake patterns
+- Schiz: regular sleep-wake, but this makes sense in the literature (+ they were on sedative medications)
+- Depressed: "sleep disturbance" a common diagnostic feature
+- Schiz: lower amplitude activity maps on to catatonia, psychomotor slowing
+
+# Fin.
+
+Discussion points to follow...
+
+![](https://media0.giphy.com/media/l0Iyl55kTeh71nTXy/giphy.gif){fig-align="center"}
+
+---------------
+
+
+- UMAP used to create "interpretable" two dimensional clusters of dense data?
+
+> Our choice of an unsupervised algorithm in this study was driven by our 
+exploratory aim, that is, to understand disorder movement patterns and 
+whether these movement patterns “map on” to existing disorder classifications
+
+---------------
+
+- Small sample, of course
+
+- SHAP does not directly indicate which features are most predictive
+
+> serves to empirically validate traditional mental health nosology against
+naturalistic and highly dimensional passively-collected movement information
+
+
+

@@ -18,3 +18,7 @@ navbar:
       href: articles/assignment2_preproc.html
     - text: "Activity Classification with the WISDM Dataset: Part 2"
       href: articles/assignment2_ml.html
+    - text: -------
+    - text: "Assignment 3: Stress Detection"
+    - text: Stress Detection with the WESAD Dataset
+      href: articles/assignment3_stress_detection.html
