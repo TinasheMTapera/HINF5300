@@ -1,0 +1,14 @@
+# Fluctuations in behavior and affect in college students measured using deep phenotyping
+
+This was a denser paper than expected, but a good read nonetheless. In the paper,
+the researchers used "deep phenotyping" to try and parse out behavioral patterns
+in the experimental cohort. The patterns included sleep and actigraphy from wearables,
+and a pretty exhaustive self-report delivered once a day. One wonders why they opted for a
+single self-report per day, as opposed to multiple, when trying to balance burden.
+The results were not unexpected: sleep and wake time showed variable patterns as the
+semesters went on. When clustered, it was interesting to see the relationships
+between sleep quality, duration, and procrastination. It would seem that while
+duration is not significantly correlated to procrastination, quality is strongly.
+Energy is not correlated with sleep duration, but is more correlated with sleep quality.
+To me, the take home seems that we should all be getting _better_ sleep, not necessarily
+_more_ sleep. 

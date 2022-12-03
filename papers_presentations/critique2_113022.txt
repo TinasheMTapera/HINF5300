@@ -1,0 +1,11 @@
+# Wearable Fetal ECG Monitoring System from Abdominal Electrocardiography Recording
+
+This is another great paper for women's health. I found it most interesting that
+the team were ready to implement this in real world settings, as I'm just learning
+that you can measure two QRS signals in one! It must be incredibly difficult to
+decompose an already extremely noisy signal into multiple sources!
+The quality of the results is actually astounding and promising for maternal
+health. I don't think it's incredibly vital that the standing results be that
+high considering that most people would probably want to sit or lay down while having
+a diagnostic procedure anyway. Overall, a great paper to read. Not many comments other
+than that it's really cool!

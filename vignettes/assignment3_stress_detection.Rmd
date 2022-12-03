@@ -1,0 +1,320 @@
+---
+title: "Stress Detection"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Stress Detection}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include=FALSE}
+library(tidymodels)
+library(readr)
+library(stringr)
+library(purrr)
+library(lubridate)
+library(skimr)
+library(here)
+
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+For this assignment, we're building stress detection models from Empatica heart rate and EDA data. We're using the famous [WESAD](https://ubicomp.eti.uni-siegen.de/home/datasets/icmi18/) dataset.
+
+In order to open the Empatica files and extract features, we used the [FLIRT](https://www.sciencedirect.com/science/article/pii/S0169260721005356?via%3Dihub) toolkit in Python.
+
+I'll briefly inject the content of the notebook below:
+
+## Data Extraction & Feature Engineering in Python with FLIRT
+
+```{r, echo=FALSE}
+htmltools::includeHTML(here("inst", "py", "assign3_download-extract-e4.html"))
+```
+
+Now, with the data available in `inst/extdata`, we can get moving:
+
+```{r, warning=FALSE, message=FALSE}
+files <- list.files(here("inst", "extdata"), pattern="S[0-9]+.csv",  full.names = TRUE)
+
+participant_ids <- files %>%
+  str_extract("S[0-9]+")
+
+input_df <- files %>%
+  map(read_csv) %>%
+  setNames(participant_ids) %>%
+  bind_rows(.id = "participant_id")
+
+```
+
+```{r setup}
+library(HINF5300)
+```
+
+## Attaching Task Labels
+
+Now we need to get the labels of the data (whether the reading is from the STRESS or 
+BASELINE task). These are similarly stored in separate files
+underneath the original zip, so here's a quick chunk to do that:
+
+```{r}
+custom_ms <- function(stri) {
+
+  stri <- str_replace(stri, "\\.", ":")
+
+  if(str_detect(stri, "[0-9]+:[0-9]+")) {
+    mins <- str_split(stri, ":")[[1]][1]
+    secs <- str_split(stri, ":")[[1]][2]
+  }
+
+  if(str_detect(stri, "^[0-9]+$")) {
+    mins <- stri
+    secs <- "0"
+  }
+
+  if(str_detect(stri, "^[0-9]+$")) {
+    mins <- stri
+  }
+
+ (lubridate::minutes(mins) + lubridate::seconds(secs)) %>% period_to_seconds()
+
+}
+
+read_quest <- function(x) {
+
+  dat <- readLines(x)
+  labels <- dat %>%
+    str_subset('ORDER') %>%
+    str_replace("# ORDER;", "") %>%
+    str_split(";",  simplify=FALSE) %>%
+    pluck(1) %>%
+    str_subset(".+")
+  
+  starts <- dat %>%
+    str_subset('START') %>%
+    str_replace("# START;", "") %>%
+    str_split(";",  simplify=FALSE) %>%
+    pluck(1) %>%
+    str_subset(".+") %>%
+    map(custom_ms) %>%
+    unlist()
+
+  ends <- dat %>%
+    str_subset('END') %>%
+    str_replace("# END;", "") %>%
+    str_split(";",  simplify=FALSE) %>%
+    pluck(1) %>%
+    str_subset(".+") %>%
+    map(custom_ms) %>%
+    unlist()
+
+  return(data.frame(labels=labels, starts=starts, ends=ends))
+
+}
+```
+
+```{r, warning=FALSE, message=FALSE}
+files <- list.files(here("inst", "extdata"), pattern="*quest.csv",  full.names = TRUE)
+
+participant_ids <- files %>%
+  str_extract("S[0-9]+")
+
+input_quest <- files %>%
+  map(read_quest) %>%
+  setNames(participant_ids) %>%
+  bind_rows(.id = "participant_id") %>%
+  filter(labels == "Base" | labels == "TSST")
+
+input_quest
+```
+
+Now, to line up our data, we have to add a numeric time index to the start and end of the
+data stream, relative to the start of the experiment:
+
+```{r}
+input_df <- input_df %>%
+  group_by(participant_id) %>%
+  mutate(diffs = c(0, diff(index)),
+    relative_time_s = accumulate(diffs, `+`))
+```
+
+```{r}
+input_df %>% 
+  slice(20:40) %>%
+  select(-matches("hrv|eda"))
+```
+
+Now we filter each participant by the values in the quest data:
+
+```{r}
+get_base_stress_2 <- function(subset, participant, tasks=input_quest) {
+  
+  part_tasks <- tasks %>% filter(participant_id == participant$participant_id)
+  baseline <- part_tasks %>% filter(labels == "Base")
+  stress <- part_tasks %>% filter(labels != "Base")
+
+  baseline_data <- subset %>%
+    filter(relative_time_s >= baseline$starts & relative_time_s <= baseline$ends) %>%
+    mutate(label = "baseline")
+  stress_data <- subset %>%
+    filter(relative_time_s >= stress$starts & relative_time_s <= stress$ends) %>%
+    mutate(label = "stress")
+
+  bind_rows(baseline_data, stress_data)
+}
+```
+
+And apply this function to each participant to get their baseline
+and stress data:
+
+```{r}
+df_labeled <- input_df %>% 
+  group_by(participant_id) %>% 
+  group_map(get_base_stress_2, .keep = TRUE) %>%
+  bind_rows()
+```
+
+## EDA
+
+Let's briefly look at this data to inform how we'll take care of the ML preprocessing steps.
+
+```{r}
+skim(df_labeled)
+```
+
+So it looks like the `eda_phasic_entropy` and `eda_tonic_entropy` have infinite values (which we were made aware
+of in the FLIRT output), we'll have to remove them. Additionally, HRV has 92 rows of missing
+values, so those will be removed too.
+
+```{r}
+df_labeled %>%
+  ggplot(aes(x=label)) +
+  geom_bar()
+```
+
+The target variable is not too imbalanced, so this should work as is.
+
+Additionally, there's a lot of skewed distributions, so we'll normalize the data.
+
+## ML Preproc with Recipes & Workflows
+
+We're specifically gonna use leave-one-subject-out for cross validation, so we won't
+use a final hold-out set like last time. Below are the steps we discussed:
+
+```{r}
+df <- df_labeled %>%
+  # remove columns with inf
+  select(-relative_time_s, -eda_phasic_entropy, -eda_tonic_entropy, -index, -diffs) %>%
+  mutate(across(where(is.character), as.factor)) %>%
+  # use complete rows
+  filter(complete.cases(.))
+```
+
+```{r}
+stress_recipe <- recipe(label ~ ., data = df) %>%
+  update_role(participant_id, new_role = "ID") %>%
+  # remove columns that have zero variance
+  step_zv(all_numeric_predictors()) %>%
+  # normalize all numeric predictors
+  step_normalize(all_numeric_predictors())
+```
+
+Now we create the cross validation data labels:
+
+```{r}
+resamples <- group_vfold_cv(df, group=participant_id)
+```
+
+Now we develop the ML workflow:
+
+```{r}
+preproc <- 
+  list(basic = stress_recipe)
+
+rf_spec <- rand_forest(trees = 1000) %>%
+  set_mode("classification") %>%
+  set_engine("ranger")
+
+mlp_cls_spec <- mlp(penalty = 0, epochs = 100) %>%
+  set_mode("classification") %>%
+  set_engine("nnet")
+
+logistic_spec <- logistic_reg() %>%
+  set_engine("glm")
+
+knn_spec <- nearest_neighbor(neighbors = 5) %>% 
+   set_engine("kknn") %>% 
+   set_mode("classification")
+
+models <- list(
+  logistic = logistic_spec,
+  randomforest = rf_spec,
+  multilayer = mlp_cls_spec,
+  knearest = knn_spec
+)
+
+ml_wf_set <- workflow_set(
+  preproc = preproc,
+  models = models,
+  cross=TRUE
+)
+```
+
+## Machine Learning
+
+```{r, warning=FALSE, message=FALSE}
+control <- control_resamples(save_pred = TRUE)
+
+ml_results <- workflow_map(
+  ml_wf_set,
+  fn="fit_resamples",
+  resamples=resamples,
+  control=control,
+  metrics=metric_set(accuracy, roc_auc, precision, recall, f_meas)
+)
+```
+
+Here are the results:
+```{r}
+collect_metrics(ml_results) %>%
+  select(-wflow_id, -.config, -preproc, -n) %>%
+  arrange(model)
+```
+
+```{r}
+ml_results %>% autoplot() + theme_minimal()
+```
+
+It looks like the logistic regression worked best with ROC_AUC of over 0.81.
+Let's look at the confusion matrix for this data (each row's prediction in
+the cross validated data):
+
+```{r}
+predictions <- ml_results %>% 
+  collect_predictions() %>%
+  filter(model == "logistic_reg")
+
+predictions %>%
+  conf_mat(truth=label, estimate=.pred_class) %>%
+  autoplot(type = "heatmap") +
+  theme_minimal()
+```
+
+## Conlcusion
+
+In this assignment, we used the WESAD dataset to develop a stress
+detection algorithm. We used FLIRT to extract features from Empatica
+data, using a window size of 60 seconds and a sliding window of 1 second;
+ we then attached those features to the labels for stress and baseline.
+Once we had the data and labels, we removed unusable columns, removed
+zero-variance columns, and normalized the data before trying a handful
+of ML models to predict stress. Surprisingly (or unsurprisingly) the simplest
+model was the most successful, so we finalized on Logistic Regression after
+using leave-one-subject-out cross validation to see which model had the
+best performance. Overall, logistic regression's accuracy was not extremely
+high, but the precision, recall, and F1 score were the highest. Unfortunately,
+the algorithm did not have as much positive predictive value in correctly
+prediction the stress case, but this may be because of the imbalance of
+classes (which may justify doing stratified sampling next time).
