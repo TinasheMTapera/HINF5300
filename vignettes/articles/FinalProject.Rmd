@@ -1,0 +1,97 @@
+---
+title: "Final Project: Drunk Driving Prediction"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(HINF5300)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tidymodels)
+library(lubridate)
+library(skimr)
+library(here)
+set.seed(10)
+
+th <- theme_set(
+  theme_minimal() +
+    theme(
+      title = element_text(size = 20),
+      axis.title = element_text(size = 16)
+      )
+  )
+```
+
+## The Data
+
+We have the drunk driving dataset available locally since it's not too
+big.
+
+```{r}
+full_data <- readRDS(here("data", "final_project_data.rds"))
+```
+
+```{r}
+full_data <- full_data %>%
+  mutate(across(where(is.character), as.factor))
+  
+full_data %>%
+  group_by(uid, sensor, condition) %>%
+  skim()
+```
+
+The data doesn't look generally unreasonable:
+
+```{r}
+p <- full_data %>%
+  pivot_longer(cols = c(X,Y,Z), names_to = "axis", values_to = "acceleration") %>%
+  ggplot(aes(x=acceleration, fill=axis)) +
+  geom_density(alpha=0.5) +
+  facet_grid(sensor ~ condition, scales = "free") +
+  labs(title = "Density Plots of Empatica vs. Firstbeat Accelerometry")
+
+ggsave(here("papers_presentations", "course_project", "presentation", "all_accel.png"), p, width=20, height=16)
+p
+```
+
+The firstbeat is more jagged because it's higher density data with a higher
+sampling frequency. Here's an example:
+
+```{r}
+sample_participants <- full_data$uid %>% sample(4)
+full_data %>%
+  filter(uid %in% sample_participants) %>%
+  group_by(uid, sensor) %>%
+  filter(hour(timestamp) == 10) %>%
+  pivot_longer(cols = c(X,Y,Z), names_to = "axis", values_to = "acceleration") %>%
+  ggplot(aes(x=timestamp, y=acceleration)) +
+  geom_line(aes(color=axis)) +
+  facet_grid(sensor ~ uid, scales="free") +
+  labs(title = "Samples of the Data") -> p
+
+ggsave(here("papers_presentations", "course_project", "presentation", "accel_samples.png"), p, width=20, height=16)
+p
+```
+
+We can quickly transform the accelerometer signal into magnitude:
+
+```{r}
+df_clean <- full_data %>%
+  mutate(mag = sqrt((X^2 + Y^2 + Z^2))) %>%
+  filter(complete.cases(.)) %>%
+  select(uid, sensor, condition, timestamp, mag)
+```
+
+
+```{r}
+
+```
+

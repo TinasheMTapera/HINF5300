@@ -10,3 +10,4 @@
 ^LICENSE\.md$
 ^papers_presentations$
 ^references.bib$
+^vignettes/articles$
